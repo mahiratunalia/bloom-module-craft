@@ -10,33 +10,80 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AgreementRouteImport } from './routes/agreement'
+import { Route as LandlordRouteImport } from './routes/landlord'
+import { Route as RoommatesRouteImport } from './routes/roommates'
+import { Route as ListingsListingIdRouteImport } from './routes/listings.$listingId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgreementRoute = AgreementRouteImport.update({
+  id: '/agreement',
+  path: '/agreement',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LandlordRoute = LandlordRouteImport.update({
+  id: '/landlord',
+  path: '/landlord',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoommatesRoute = RoommatesRouteImport.update({
+  id: '/roommates',
+  path: '/roommates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListingsListingIdRoute = ListingsListingIdRouteImport.update({
+  id: '/listings/$listingId',
+  path: '/listings/$listingId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agreement': typeof AgreementRoute
+  '/landlord': typeof LandlordRoute
+  '/roommates': typeof RoommatesRoute
+  '/listings/$listingId': typeof ListingsListingIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agreement': typeof AgreementRoute
+  '/landlord': typeof LandlordRoute
+  '/roommates': typeof RoommatesRoute
+  '/listings/$listingId': typeof ListingsListingIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agreement': typeof AgreementRoute
+  '/landlord': typeof LandlordRoute
+  '/roommates': typeof RoommatesRoute
+  '/listings/$listingId': typeof ListingsListingIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    '/' | '/agreement' | '/landlord' | '/roommates' | '/listings/$listingId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/agreement' | '/landlord' | '/roommates' | '/listings/$listingId'
+  id:
+    | '__root__'
+    | '/'
+    | '/agreement'
+    | '/landlord'
+    | '/roommates'
+    | '/listings/$listingId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgreementRoute: typeof AgreementRoute
+  LandlordRoute: typeof LandlordRoute
+  RoommatesRoute: typeof RoommatesRoute
+  ListingsListingIdRoute: typeof ListingsListingIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +95,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agreement': {
+      id: '/agreement'
+      path: '/agreement'
+      fullPath: '/agreement'
+      preLoaderRoute: typeof AgreementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/landlord': {
+      id: '/landlord'
+      path: '/landlord'
+      fullPath: '/landlord'
+      preLoaderRoute: typeof LandlordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roommates': {
+      id: '/roommates'
+      path: '/roommates'
+      fullPath: '/roommates'
+      preLoaderRoute: typeof RoommatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/listings/$listingId': {
+      id: '/listings/$listingId'
+      path: '/listings/$listingId'
+      fullPath: '/listings/$listingId'
+      preLoaderRoute: typeof ListingsListingIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgreementRoute: AgreementRoute,
+  LandlordRoute: LandlordRoute,
+  RoommatesRoute: RoommatesRoute,
+  ListingsListingIdRoute: ListingsListingIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
