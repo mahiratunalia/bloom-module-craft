@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AgreementRouteImport } from './routes/agreement'
 import { Route as LandlordRouteImport } from './routes/landlord'
 import { Route as RoommatesRouteImport } from './routes/roommates'
 import { Route as ListingsListingIdRouteImport } from './routes/listings.$listingId'
@@ -17,6 +18,11 @@ import { Route as ListingsListingIdRouteImport } from './routes/listings.$listin
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgreementRoute = AgreementRouteImport.update({
+  id: '/agreement',
+  path: '/agreement',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LandlordRoute = LandlordRouteImport.update({
@@ -37,12 +43,14 @@ const ListingsListingIdRoute = ListingsListingIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agreement': typeof AgreementRoute
   '/landlord': typeof LandlordRoute
   '/roommates': typeof RoommatesRoute
   '/listings/$listingId': typeof ListingsListingIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agreement': typeof AgreementRoute
   '/landlord': typeof LandlordRoute
   '/roommates': typeof RoommatesRoute
   '/listings/$listingId': typeof ListingsListingIdRoute
@@ -50,20 +58,29 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agreement': typeof AgreementRoute
   '/landlord': typeof LandlordRoute
   '/roommates': typeof RoommatesRoute
   '/listings/$listingId': typeof ListingsListingIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/landlord' | '/roommates' | '/listings/$listingId'
+  fullPaths:
+    '/' | '/agreement' | '/landlord' | '/roommates' | '/listings/$listingId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/landlord' | '/roommates' | '/listings/$listingId'
-  id: '__root__' | '/' | '/landlord' | '/roommates' | '/listings/$listingId'
+  to: '/' | '/agreement' | '/landlord' | '/roommates' | '/listings/$listingId'
+  id:
+    | '__root__'
+    | '/'
+    | '/agreement'
+    | '/landlord'
+    | '/roommates'
+    | '/listings/$listingId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgreementRoute: typeof AgreementRoute
   LandlordRoute: typeof LandlordRoute
   RoommatesRoute: typeof RoommatesRoute
   ListingsListingIdRoute: typeof ListingsListingIdRoute
@@ -76,6 +93,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agreement': {
+      id: '/agreement'
+      path: '/agreement'
+      fullPath: '/agreement'
+      preLoaderRoute: typeof AgreementRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/landlord': {
@@ -104,6 +128,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgreementRoute: AgreementRoute,
   LandlordRoute: LandlordRoute,
   RoommatesRoute: RoommatesRoute,
   ListingsListingIdRoute: ListingsListingIdRoute,
