@@ -2,13 +2,13 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Signal, TrustBreakdownTable, TrustScoreBadge, VerifiedBadge } from "@/components/trust";
-import { bdt, formatDate, landlords, listings } from "@/data/module1";
+import { bdt, formatDate, getLandlord, listings } from "@/data/module1";
 
 export const Route = createFileRoute("/listings/$listingId")({
   loader: ({ params }) => {
     const listing = listings.find((l) => l.id === params.listingId);
     if (!listing) throw notFound();
-    return { listing, owner: landlords[listing.landlordId] };
+    return { listing, owner: getLandlord(listing.landlordId) };
   },
   head: ({ loaderData }) => {
     if (!loaderData) {
@@ -78,7 +78,7 @@ function ListingDetail() {
                 </p>
               </div>
               <ul className="divide-y divide-border border-t border-border">
-                {listing.landmarks.map((m) => (
+                {listing.landmarks.map((m: string) => (
                   <li key={m} className="px-4 py-2.5 font-mono text-xs">
                     {m}
                   </li>
@@ -90,7 +90,7 @@ function ListingDetail() {
           <section className="mt-10">
             <h2 className="text-2xl">House rules</h2>
             <ol className="mt-4 divide-y divide-border border-y border-border">
-              {listing.houseRules.map((rule, i) => (
+              {listing.houseRules.map((rule: string, i: number) => (
                 <li key={rule} className="flex gap-4 py-3 text-sm">
                   <span className="font-mono text-xs text-muted-foreground">
                     {String(i + 1).padStart(2, "0")}

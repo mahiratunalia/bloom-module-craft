@@ -37,7 +37,7 @@ export type Landlord = {
   trust: TrustBreakdown;
 };
 
-export const landlords: Record<string, Landlord> = {
+export const landlordsById: Record<string, Landlord> = {
   "ll-1": {
     id: "ll-1",
     name: "Rezaul Karim",
@@ -84,7 +84,7 @@ export type Listing = {
   houseRules: string[];
   photo: string;
   photoAlt: string;
-  landlordId: keyof typeof landlords;
+  landlordId: string;
   status: "Active" | "Draft" | "Rented";
   applicants: number;
   postedOn: string;
@@ -287,3 +287,8 @@ export const bdt = (n: number) => `৳${n.toLocaleString("en-BD")}`;
 
 export const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+export function getLandlord(id: string): Landlord {
+  const found = landlordsById[id];
+  if (!found) throw new Error(`Unknown landlord: ${id}`);
+  return found;
+}

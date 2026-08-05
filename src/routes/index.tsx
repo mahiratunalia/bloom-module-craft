@@ -6,7 +6,7 @@ import { Signal, TrustScoreBadge, VerifiedBadge } from "@/components/trust";
 import {
   bdt,
   formatDate,
-  landlords,
+  getLandlord,
   listings,
   trustScore,
   type RoomType,
@@ -50,7 +50,7 @@ function SearchPage() {
       .sort((a, b) =>
         sort === "rent"
           ? a.rent - b.rent
-          : trustScore(landlords[b.landlordId].trust) - trustScore(landlords[a.landlordId].trust),
+          : trustScore(getLandlord(b.landlordId).trust) - trustScore(getLandlord(a.landlordId).trust),
       );
   }, [area, roomType, maxRent, availableBy, sort]);
 
@@ -142,7 +142,7 @@ function SearchPage() {
 
         <ul className="mt-6 divide-y divide-border border-y border-border">
           {results.map((l) => {
-            const owner = landlords[l.landlordId];
+            const owner = getLandlord(l.landlordId);
             return (
               <li key={l.id}>
                 <Link
