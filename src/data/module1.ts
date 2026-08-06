@@ -219,15 +219,57 @@ export const applicants: Applicant[] = [
   },
 ];
 
+export type RankSignal = {
+  label: string;
+  formula: string;
+  detail: string;
+  points: number;
+  tone: "up" | "down" | "flat";
+};
+
 /** Ranking: verification → payment history → dispute record → Trust Score. */
 export function rankApplicants(list: Applicant[]) {
   return [...list]
     .map((a) => {
       const verification = (a.nidVerified ? 1 : 0) + (a.phoneVerified ? 1 : 0);
       const score = trustScore(a.trust);
-      const rankValue =
-        verification * 1000 + a.onTimePaymentRate * 5 - a.disputes * 120 + score * 2;
-      return { ...a, score, verification, rankValue };
+      const signals: RankSignal[] = [
+        {
+          label: "Verification status",
+          formula: "documents verified × 1000",
+          detail: `${a.nidVerified ? "NID verified" : "NID pending"}, ${
+            a.phoneVerified ? "phone verified" : "phone pending"
+          }`,
+          points: verification * 1000,
+          tone: verification === 2 ? "up" : "down",
+        },
+        {
+          label: "Payment history",
+          formula: "on-time rate × 5",
+          detail: `${a.onTimePaymentRate}% of past rents paid on time`,
+          points: a.onTimePaymentRate * 5,
+          tone: a.onTimePaymentRate >= 85 ? "up" : "down",
+        },
+        {
+          label: "Dispute record",
+          formula: "disputes × −120",
+          detail:
+            a.disputes === 0
+              ? "No disputes on record"
+              : `${a.disputes} dispute${a.disputes === 1 ? "" : "s"} on record`,
+          points: -a.disputes * 120,
+          tone: a.disputes === 0 ? "flat" : "down",
+        },
+        {
+          label: "Trust Score",
+          formula: "weighted Trust Score × 2",
+          detail: `Composite score of ${score} across six weighted factors`,
+          points: score * 2,
+          tone: score >= 80 ? "up" : "down",
+        },
+      ];
+      const rankValue = signals.reduce((sum, s) => sum + s.points, 0);
+      return { ...a, score, verification, rankValue, signals };
     })
     .sort((a, b) => b.rankValue - a.rankValue);
 }

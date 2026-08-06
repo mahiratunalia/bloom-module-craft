@@ -1,4 +1,4 @@
-import { TRUST_WEIGHTS, trustScore, type TrustBreakdown } from "@/data/module1";
+import { TRUST_WEIGHTS, trustScore, type Landlord, type TrustBreakdown } from "@/data/module1";
 
 function toneFor(score: number) {
   if (score >= 85) return "text-trust-high";
@@ -69,6 +69,89 @@ export function Signal({ label, value }: { label: string; value: string }) {
     <div>
       <div className="eyebrow">{label}</div>
       <div className="mt-1 font-mono text-sm tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+/** Inline pass/pending status pill used for individual verification checks. */
+export function VerificationStatus({
+  label,
+  state,
+  note,
+}: {
+  label: string;
+  state: "verified" | "pending" | "watch";
+  note?: string;
+}) {
+  const tone =
+    state === "verified"
+      ? "border-primary/40 text-primary"
+      : state === "watch"
+        ? "border-accent/50 text-accent"
+        : "border-destructive/40 text-destructive";
+  const glyph = state === "verified" ? "✓" : state === "watch" ? "!" : "○";
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 border px-2 py-0.5 font-mono text-[11px] ${tone}`}
+      title={note}
+    >
+      <span aria-hidden>{glyph}</span>
+      {label}
+    </span>
+  );
+}
+
+function credibilityBand(score: number) {
+  if (score >= 85) return { label: "Strong record", tone: "text-trust-high" };
+  if (score >= 70) return { label: "Mixed record", tone: "text-trust-mid" };
+  return { label: "Thin record", tone: "text-trust-low" };
+}
+
+/**
+ * Credibility strip: the four listing-level trust signals with inline
+ * verification statuses, so a tenant can judge a landlord at a glance.
+ */
+export function CredibilityStrip({
+  owner,
+  compact = false,
+}: {
+  owner: Landlord;
+  compact?: boolean;
+}) {
+  const score = trustScore(owner.trust);
+  const band = credibilityBand(score);
+  const fast = owner.avgResponseHours <= 12;
+  const experienced = owner.completedRentals >= 5;
+
+  return (
+    <div className="w-full">
+      <div className="flex flex-wrap items-center gap-2">
+        <VerificationStatus
+          label={owner.verified ? `Identity & ownership · ${owner.verifiedSince}` : "Identity unverified"}
+          state={owner.verified ? "verified" : "pending"}
+          note="NID, property ownership proof and phone number checked by BasaKhuji"
+        />
+        <VerificationStatus
+          label={`Replies in ~${owner.avgResponseHours}h`}
+          state={fast ? "verified" : "watch"}
+          note={`${owner.responseRate}% of applicant messages answered`}
+        />
+        <VerificationStatus
+          label={`${owner.completedRentals} tenancies completed`}
+          state={experienced ? "verified" : "watch"}
+          note="Leases that ran to term on their original agreement"
+        />
+        <VerificationStatus
+          label={`${owner.trust.disputes >= 80 ? "Clean" : "Contested"} dispute record`}
+          state={owner.trust.disputes >= 80 ? "verified" : "watch"}
+          note="Share of disputes resolved in favour or with no fault found"
+        />
+      </div>
+      {!compact && (
+        <p className={`mt-3 font-mono text-[11px] uppercase tracking-widest ${band.tone}`}>
+          {band.label} · Trust {score}/100
+        </p>
+      )}
     </div>
   );
 }
