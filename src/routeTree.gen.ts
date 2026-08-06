@@ -10,9 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AgreementRouteImport } from './routes/agreement'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as LandlordRouteImport } from './routes/landlord'
 import { Route as RoommatesRouteImport } from './routes/roommates'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as ListingsListingIdRouteImport } from './routes/listings.$listingId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -20,9 +23,18 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AgreementRoute = AgreementRouteImport.update({
   id: '/agreement',
   path: '/agreement',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LandlordRoute = LandlordRouteImport.update({
@@ -35,6 +47,11 @@ const RoommatesRoute = RoommatesRouteImport.update({
   path: '/roommates',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ListingsListingIdRoute = ListingsListingIdRouteImport.update({
   id: '/listings/$listingId',
   path: '/listings/$listingId',
@@ -44,43 +61,68 @@ const ListingsListingIdRoute = ListingsListingIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agreement': typeof AgreementRoute
+  '/auth': typeof AuthRoute
   '/landlord': typeof LandlordRoute
   '/roommates': typeof RoommatesRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/listings/$listingId': typeof ListingsListingIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agreement': typeof AgreementRoute
+  '/auth': typeof AuthRoute
   '/landlord': typeof LandlordRoute
   '/roommates': typeof RoommatesRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/listings/$listingId': typeof ListingsListingIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/agreement': typeof AgreementRoute
+  '/auth': typeof AuthRoute
   '/landlord': typeof LandlordRoute
   '/roommates': typeof RoommatesRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/listings/$listingId': typeof ListingsListingIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/agreement' | '/landlord' | '/roommates' | '/listings/$listingId'
+    | '/'
+    | '/agreement'
+    | '/auth'
+    | '/landlord'
+    | '/roommates'
+    | '/profile'
+    | '/listings/$listingId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/agreement' | '/landlord' | '/roommates' | '/listings/$listingId'
+  to:
+    | '/'
+    | '/agreement'
+    | '/auth'
+    | '/landlord'
+    | '/roommates'
+    | '/profile'
+    | '/listings/$listingId'
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
     | '/agreement'
+    | '/auth'
     | '/landlord'
     | '/roommates'
+    | '/_authenticated/profile'
     | '/listings/$listingId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AgreementRoute: typeof AgreementRoute
+  AuthRoute: typeof AuthRoute
   LandlordRoute: typeof LandlordRoute
   RoommatesRoute: typeof RoommatesRoute
   ListingsListingIdRoute: typeof ListingsListingIdRoute
@@ -95,11 +137,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/agreement': {
       id: '/agreement'
       path: '/agreement'
       fullPath: '/agreement'
       preLoaderRoute: typeof AgreementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/landlord': {
@@ -116,6 +172,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoommatesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/listings/$listingId': {
       id: '/listings/$listingId'
       path: '/listings/$listingId'
@@ -126,9 +189,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AgreementRoute: AgreementRoute,
+  AuthRoute: AuthRoute,
   LandlordRoute: LandlordRoute,
   RoommatesRoute: RoommatesRoute,
   ListingsListingIdRoute: ListingsListingIdRoute,

@@ -1,0 +1,108 @@
+import { NoObjectGeneratedError, Output, streamText } from "ai";
+import { z } from "zod";
+
+import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+
+export type AgreementTerms = {
+  reference: string;
+  landlordName: string;
+  landlordVerifiedSince: string;
+  tenantName: string;
+  tenantNid: string;
+  tenantPhone: string;
+  propertyTitle: string;
+  roomType: string;
+  area: string;
+  city: string;
+  coords: string;
+  rent: number;
+  deposit: number;
+  durationMonths: number;
+  startDate: string;
+  endDate: string;
+  houseRules: string[];
+};
+
+export type AgreementClause = { title: string; body: string };
+
+const clauseSchema = z.object({
+  clauses: z.array(
+    z.object({
+      title: z.string(),
+      body: z.string(),
+    }),
+  ),
+});
+
+function fallbackClauses(t: AgreementTerms): AgreementClause[] {
+  return [
+    {
+      title: "Parties",
+      body: `This agreement is made between ${t.landlordName} (the "Landlord"), a BasaKhuji-verified property owner since ${t.landlordVerifiedSince}, and ${t.tenantName} (the "Tenant"), holder of National ID ${t.tenantNid}, contactable on ${t.tenantPhone}.`,
+    },
+    {
+      title: "Premises",
+      body: `The Landlord lets the ${t.roomType.toLowerCase()} described as "${t.propertyTitle}" at ${t.area}, ${t.city}, pinned at ${t.coords}.`,
+    },
+    {
+      title: "Term",
+      body: `The tenancy runs ${t.durationMonths} months from ${t.startDate} to ${t.endDate}, renewable by mutual written acknowledgement on the platform.`,
+    },
+    {
+      title: "Rent and deposit",
+      body: `Rent is BDT ${t.rent.toLocaleString("en-BD")} per month, payable by the 5th and logged on BasaKhuji. A refundable security deposit of BDT ${t.deposit.toLocaleString("en-BD")} is held and returned at final settlement, less documented deductions.`,
+    },
+    { title: "House rules", body: `${t.houseRules.join("; ")}.` },
+    {
+      title: "Record of tenancy",
+      body: "Every payment, maintenance request and message exchanged on the platform forms part of the tenancy record and may be relied on by either party in a dispute.",
+    },
+  ];
+}
+
+export async function draftAgreementClauses(
+  terms: AgreementTerms,
+): Promise<{ clauses: AgreementClause[]; source: "ai" | "fallback"; error?: string }> {
+  const key = process.env["LOVABLE_API_KEY"];
+  if (!key) return { clauses: fallbackClauses(terms), source: "fallback", error: "AI is not configured." };
+
+  const gateway = createLovableAiGatewayProvider(key);
+
+  const prompt = [
+    "Draft the numbered clauses of a residential rental agreement for Bangladesh in plain, formal English.",
+    "Return 6 to 9 clauses. Each clause has a short title (2-4 words) and a body of 2-4 sentences.",
+    "Cover: parties, premises, term, rent and deposit, house rules, maintenance and repairs, termination and notice, dispute resolution using the platform record.",
+    "Use only the facts below; never invent names, amounts or dates. Amounts are Bangladeshi Taka, written as 'BDT 9,500'.",
+    "Do not use markdown, bullet points, or clause numbers inside the text.",
+    "",
+    `Reference: ${terms.reference}`,
+    `Landlord: ${terms.landlordName} (BasaKhuji-verified since ${terms.landlordVerifiedSince})`,
+    `Tenant: ${terms.tenantName}, National ID ${terms.tenantNid}, phone ${terms.tenantPhone}`,
+    `Property: "${terms.propertyTitle}" — ${terms.roomType} at ${terms.area}, ${terms.city} (${terms.coords})`,
+    `Monthly rent: BDT ${terms.rent.toLocaleString("en-BD")}, payable by the 5th`,
+    `Security deposit: BDT ${terms.deposit.toLocaleString("en-BD")}, refundable`,
+    `Term: ${terms.durationMonths} months, ${terms.startDate} to ${terms.endDate}`,
+    `House rules: ${terms.houseRules.join("; ")}`,
+    "Both parties acknowledge the agreement inside BasaKhuji, and the platform record of payments, maintenance requests and messages is admissible evidence in any dispute.",
+  ].join("\n");
+
+  try {
+    const result = streamText({
+      model: gateway("google/gemini-3.6-flash"),
+      output: Output.object({ schema: clauseSchema }),
+      prompt,
+    });
+    const output = await result.output;
+    const clauses = (output.clauses ?? [])
+      .filter((c) => c.title && c.body)
+      .slice(0, 12);
+    if (clauses.length === 0) return { clauses: fallbackClauses(terms), source: "fallback" };
+    return { clauses, source: "ai" };
+  } catch (error) {
+    if (NoObjectGeneratedError.isInstance(error)) {
+      return { clauses: fallbackClauses(terms), source: "fallback", error: "AI returned malformed output." };
+    }
+    const message = error instanceof Error ? error.message : "AI request failed.";
+    return { clauses: fallbackClauses(terms), source: "fallback", error: message };
+  }
+}

@@ -1,8 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 
 import { TrustBar } from "@/components/trust";
 import { bdt, compatibility, roommateCandidates, type RoommateProfile } from "@/data/module1";
+import { useSession } from "@/hooks/use-session";
+import {
+  useRoommatePreferences,
+  useRoommateSessions,
+  useSaveRoommatePreferences,
+  useSaveRoommateSession,
+} from "@/lib/user-data";
 
 export const Route = createFileRoute("/roommates")({
   head: () => ({
@@ -24,6 +31,14 @@ export const Route = createFileRoute("/roommates")({
 });
 
 function RoommatesPage() {
+  const { user } = useSession();
+  const userId = user?.id;
+  const savedPrefs = useRoommatePreferences(userId);
+  const savePrefs = useSaveRoommatePreferences(userId);
+  const saveSession = useSaveRoommateSession(userId);
+  const sessions = useRoommateSessions(userId);
+  const [label, setLabel] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
   const [profile, setProfile] = useState<RoommateProfile>({
     budget: 6500,
     sleep: "Late",
@@ -32,6 +47,19 @@ function RoommatesPage() {
     study: "Quiet",
     visitors: "Rare",
   });
+
+  useEffect(() => {
+    const p = savedPrefs.data;
+    if (!p) return;
+    setProfile({
+      budget: p.budget,
+      sleep: p.sleep as RoommateProfile["sleep"],
+      smoking: p.smoking as RoommateProfile["smoking"],
+      smokingNonNegotiable: p.smoking_non_negotiable,
+      study: p.study as RoommateProfile["study"],
+      visitors: p.visitors as RoommateProfile["visitors"],
+    });
+  }, [savedPrefs.data]);
 
   const matches = useMemo(
     () =>
@@ -43,6 +71,24 @@ function RoommatesPage() {
 
   const set = <K extends keyof RoommateProfile>(key: K, value: RoommateProfile[K]) =>
     setProfile((p) => ({ ...p, [key]: value }));
+
+  async function persistSession() {
+    setStatus(null);
+    await saveSession.mutateAsync({
+      label: label.trim() || `Session · ${new Date().toLocaleDateString("en-GB")}`,
+      profile,
+      results: matches.map(({ candidate, result }) => ({
+        candidateId: candidate.id,
+        candidateName: candidate.name,
+        detail: candidate.detail,
+        total: result.total,
+        hardBlocked: result.hardBlocked,
+        parts: result.parts.map((p) => ({ label: p.label, weight: p.weight, value: p.value })),
+      })),
+    });
+    setLabel("");
+    setStatus("Session saved — reopen it any time from your profile with identical scores.");
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
@@ -105,6 +151,53 @@ function RoommatesPage() {
             value={profile.visitors}
             onChange={(v) => set("visitors", v)}
           />
+
+          {user ? (
+            <div className="space-y-4 border-t border-border pt-6">
+              <button
+                type="button"
+                onClick={() => savePrefs.mutate(profile)}
+                disabled={savePrefs.isPending}
+                className="w-full border border-foreground px-4 py-2.5 text-xs hover:bg-foreground hover:text-paper disabled:opacity-50"
+              >
+                {savePrefs.isPending ? "Saving…" : "Save these preferences to my profile"}
+              </button>
+              <label className="block">
+                <span className="eyebrow">Session name</span>
+                <input
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  placeholder="Mohammadpur mess, September"
+                  className="mt-2 w-full border-b border-input bg-transparent py-1.5 text-sm outline-none focus:border-foreground"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={persistSession}
+                disabled={saveSession.isPending}
+                className="w-full bg-foreground px-4 py-3 text-sm text-paper hover:opacity-90 disabled:opacity-50"
+              >
+                {saveSession.isPending ? "Saving…" : "Save this matching session"}
+              </button>
+              {status && <p className="text-xs text-primary">{status}</p>}
+              {sessions.data && sessions.data.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {sessions.data.length} saved session{sessions.data.length === 1 ? "" : "s"} ·{" "}
+                  <Link to="/profile" className="underline underline-offset-4">
+                    revisit them
+                  </Link>
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="border-t border-border pt-6 text-xs text-muted-foreground">
+              <Link to="/auth" className="underline underline-offset-4">
+                Sign in
+              </Link>{" "}
+              to save these preferences and keep a matching session you can revisit with the same
+              compatibility results.
+            </p>
+          )}
         </form>
 
         <section>

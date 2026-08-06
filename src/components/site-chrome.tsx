@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
+import { useSession } from "@/hooks/use-session";
+
 const nav = [
   { to: "/", label: "Search" },
   { to: "/landlord", label: "Landlord desk" },
@@ -8,6 +10,7 @@ const nav = [
 ] as const;
 
 export function SiteHeader() {
+  const { user, loading } = useSession();
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-paper/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-5">
@@ -30,6 +33,16 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
+          {!loading && (
+            <Link
+              to={user ? "/profile" : "/auth"}
+              activeProps={{ className: "border-foreground text-foreground" }}
+              inactiveProps={{ className: "border-transparent text-muted-foreground hover:text-foreground" }}
+              className="ml-1 border-b-2 px-2 py-1 text-[13px] transition-colors sm:px-3"
+            >
+              {user ? "Profile" : "Sign in"}
+            </Link>
+          )}
         </nav>
       </div>
     </header>
