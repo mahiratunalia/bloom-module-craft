@@ -1,7 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 
 import { bdt, formatDate, getLandlord, listings } from "@/data/module1";
+import { useSession } from "@/hooks/use-session";
+import { downloadAgreementPdf } from "@/lib/agreement-pdf";
+import { generateAgreementClauses } from "@/lib/agreement.functions";
+import type { AgreementClause } from "@/lib/agreement.server";
 
 export const Route = createFileRoute("/agreement")({
   head: () => ({
@@ -26,9 +31,14 @@ const listing = listings[0]!;
 const tenant = { name: "Tanzila Rahman", nid: "1994 7712 8830", phone: "+880 1712 445 908" };
 
 function AgreementPage() {
+  const { user } = useSession();
+  const draft = useServerFn(generateAgreementClauses);
   const owner = getLandlord(listing.landlordId);
   const [duration, setDuration] = useState(12);
-  const [generated, setGenerated] = useState(false);
+  const [clauses, setClauses] = useState<AgreementClause[] | null>(null);
+  const [source, setSource] = useState<"ai" | "fallback" | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [tenantSigned, setTenantSigned] = useState(false);
   const [landlordSigned, setLandlordSigned] = useState(false);
   const bothSigned = tenantSigned && landlordSigned;
@@ -37,6 +47,66 @@ function AgreementPage() {
   const endDate = new Date(new Date(startDate).setMonth(new Date(startDate).getMonth() + duration))
     .toISOString()
     .slice(0, 10);
+  const reference = `${listing.id}/${duration}M`;
+
+  const reset = () => {
+    setClauses(null);
+    setSource(null);
+    setNotice(null);
+    setTenantSigned(false);
+    setLandlordSigned(false);
+  };
+
+  async function generate() {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const result = await draft({
+        data: {
+          reference,
+          landlordName: owner.name,
+          landlordVerifiedSince: owner.verifiedSince,
+          tenantName: tenant.name,
+          tenantNid: tenant.nid,
+          tenantPhone: tenant.phone,
+          propertyTitle: listing.title,
+          roomType: listing.roomType,
+          area: listing.area,
+          city: listing.city,
+          coords: `${listing.coords.lat.toFixed(4)}, ${listing.coords.lng.toFixed(4)}`,
+          rent: listing.rent,
+          deposit: listing.deposit,
+          durationMonths: duration,
+          startDate: formatDate(startDate),
+          endDate: formatDate(endDate),
+          houseRules: listing.houseRules,
+        },
+      });
+      setClauses(result.clauses);
+      setSource(result.source);
+      if (result.error) setNotice(`${result.error} Showing the standard clause set instead.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not draft the agreement.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function exportPdf() {
+    if (!clauses) return;
+    downloadAgreementPdf({
+      reference,
+      generatedOn: formatDate(new Date().toISOString()),
+      landlordName: owner.name,
+      tenantName: tenant.name,
+      propertyLine: `${listing.title} — ${listing.roomType}, ${listing.area}, ${listing.city}`,
+      rentLine: `Rent: ${bdt(listing.rent)} per month · Deposit: ${bdt(listing.deposit)}`,
+      termLine: `Term: ${duration} months, ${formatDate(startDate)} to ${formatDate(endDate)}`,
+      clauses,
+      tenantSigned,
+      landlordSigned,
+    });
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
@@ -75,65 +145,69 @@ function AgreementPage() {
                 value={duration}
                 onChange={(e) => {
                   setDuration(Number(e.target.value));
-                  setGenerated(false);
-                  setTenantSigned(false);
-                  setLandlordSigned(false);
+                  reset();
                 }}
                 className="mt-3 w-full accent-[var(--primary)]"
               />
             </div>
           </Block>
-          <button
-            type="button"
-            onClick={() => setGenerated(true)}
-            className="w-full bg-foreground px-4 py-3 text-sm text-paper hover:opacity-90"
-          >
-            {generated ? "Regenerate draft" : "Generate agreement draft"}
-          </button>
+          {user ? (
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={generate}
+                disabled={busy}
+                className="w-full bg-foreground px-4 py-3 text-sm text-paper hover:opacity-90 disabled:opacity-50"
+              >
+                {busy ? "Drafting with AI…" : clauses ? "Regenerate draft" : "Generate agreement draft"}
+              </button>
+              <button
+                type="button"
+                onClick={exportPdf}
+                disabled={!clauses}
+                className="w-full border border-foreground px-4 py-3 text-sm hover:bg-foreground hover:text-paper disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-foreground"
+              >
+                Download PDF
+              </button>
+            </div>
+          ) : (
+            <div className="border border-dashed border-border p-5 text-sm text-muted-foreground">
+              <Link to="/auth" className="underline underline-offset-4">
+                Sign in
+              </Link>{" "}
+              to draft and download the agreement PDF.
+            </div>
+          )}
+          {notice && (
+            <p className="border-l-2 border-accent pl-3 text-xs text-muted-foreground">{notice}</p>
+          )}
         </aside>
 
         <section>
-          {!generated ? (
+          {!clauses ? (
             <div className="flex h-full min-h-80 items-center justify-center border border-dashed border-border p-10 text-center">
               <p className="max-w-xs text-sm text-muted-foreground">
-                No draft yet. Generate one from the accepted application's terms.
+                No draft yet. Generate one from the accepted application&rsquo;s terms — the clauses are
+                written by Gemini from the listing data, then laid out and exported as a PDF.
               </p>
             </div>
           ) : (
             <article className="border border-border bg-card p-8 sm:p-12">
-              <p className="eyebrow">Draft · not yet acknowledged</p>
+              <p className="eyebrow">
+                {bothSigned ? "Acknowledged" : "Draft · not yet acknowledged"} ·{" "}
+                {source === "ai" ? "clauses drafted by Gemini" : "standard clause set"}
+              </p>
               <h2 className="mt-4 text-3xl">Residential Rental Agreement</h2>
               <p className="mt-2 font-mono text-[11px] text-muted-foreground">
-                Ref {listing.id}/{duration}M · generated {formatDate(new Date().toISOString())}
+                Ref {reference} · generated {formatDate(new Date().toISOString())}
               </p>
 
               <div className="mt-8 space-y-6 text-[15px] leading-relaxed">
-                <Clause n={1} title="Parties">
-                  This agreement is made between {owner.name} (“the Landlord”), a BasaKhuji-verified
-                  property owner, and {tenant.name} (“the Tenant”), holder of National ID{" "}
-                  {tenant.nid}.
-                </Clause>
-                <Clause n={2} title="Premises">
-                  The Landlord lets the {listing.roomType.toLowerCase()} described as “{listing.title}”
-                  at {listing.area}, {listing.city}, pinned at {listing.coords.lat.toFixed(4)},{" "}
-                  {listing.coords.lng.toFixed(4)}.
-                </Clause>
-                <Clause n={3} title="Term">
-                  The tenancy runs {duration} months from {formatDate(startDate)} to{" "}
-                  {formatDate(endDate)}, renewable by mutual written acknowledgement on the platform.
-                </Clause>
-                <Clause n={4} title="Rent and deposit">
-                  Rent is {bdt(listing.rent)} per month, payable by the 5th and logged on BasaKhuji. A
-                  refundable security deposit of {bdt(listing.deposit)} is held and returned at final
-                  settlement, less documented deductions.
-                </Clause>
-                <Clause n={5} title="House rules">
-                  {listing.houseRules.join("; ")}.
-                </Clause>
-                <Clause n={6} title="Record of tenancy">
-                  Every payment, maintenance request and message exchanged on the platform forms part
-                  of the tenancy record and may be relied on by either party in a dispute.
-                </Clause>
+                {clauses.map((clause, i) => (
+                  <Clause key={clause.title + i} n={i + 1} title={clause.title}>
+                    {clause.body}
+                  </Clause>
+                ))}
               </div>
 
               <div className="mt-10 grid gap-6 border-t border-border pt-8 sm:grid-cols-2">
@@ -157,7 +231,7 @@ function AgreementPage() {
                 }`}
               >
                 {bothSigned
-                  ? "Acknowledged by both parties. PDF emailed to tenant and landlord; agreement attached to the tenancy record."
+                  ? "Acknowledged by both parties. Download the signed PDF — it is attached to the tenancy record and to any future maintenance request or dispute."
                   : "Awaiting acknowledgement from both parties before the PDF is issued."}
               </p>
             </article>
