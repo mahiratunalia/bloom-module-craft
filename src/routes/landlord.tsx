@@ -34,6 +34,7 @@ function LandlordDesk() {
   const owner = getLandlord("ll-1");
   const myListings = listings;
   const [selected, setSelected] = useState("bk-1041");
+  const [explained, setExplained] = useState<string | null>(null);
 
   const ranked = useMemo(
     () => rankApplicants(applicants.filter((a) => a.listingId === selected)),
@@ -149,6 +150,13 @@ function LandlordDesk() {
                   <div className="mt-2">
                     <TrustBar value={a.score} />
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setExplained(explained === a.id ? null : a.id)}
+                    className="mt-4 w-full border border-border px-3 py-2 text-xs hover:bg-secondary"
+                  >
+                    {explained === a.id ? "Hide ranking" : "Why this ranked"}
+                  </button>
                   <div className="mt-4 flex gap-2">
                     <button className="flex-1 bg-foreground px-3 py-2 text-xs text-paper hover:opacity-90">
                       Accept
@@ -158,6 +166,46 @@ function LandlordDesk() {
                     </button>
                   </div>
                 </div>
+                {explained === a.id && (
+                  <div className="border-t border-border pt-5 sm:col-span-3">
+                    <p className="eyebrow">
+                      Why {a.name.split(" ")[0]} sits at position {String(i + 1).padStart(2, "0")}
+                    </p>
+                    <dl className="mt-4 divide-y divide-border border-y border-border">
+                      {a.signals.map((s) => (
+                        <div key={s.label} className="grid grid-cols-[1fr_auto] gap-x-6 py-3">
+                          <dt className="text-sm">
+                            {s.label}
+                            <span className="ml-2 font-mono text-[11px] text-muted-foreground">
+                              {s.formula}
+                            </span>
+                            <p className="mt-0.5 text-xs text-muted-foreground">{s.detail}</p>
+                          </dt>
+                          <dd
+                            className={`font-mono text-sm tabular-nums ${
+                              s.tone === "up"
+                                ? "text-trust-high"
+                                : s.tone === "down"
+                                  ? "text-trust-low"
+                                  : "text-muted-foreground"
+                            }`}
+                          >
+                            {s.points > 0 ? "+" : ""}
+                            {s.points}
+                          </dd>
+                        </div>
+                      ))}
+                      <div className="grid grid-cols-[1fr_auto] gap-x-6 py-3">
+                        <dt className="text-sm font-medium">Ranking value</dt>
+                        <dd className="font-mono text-sm tabular-nums">{a.rankValue}</dd>
+                      </div>
+                    </dl>
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Application time is not an input. Verification dominates the ordering, then
+                      payment history, then dispute record, with the Trust Score breaking ties.
+                    </p>
+                  </div>
+                )}
               </li>
             ))}
           </ol>
