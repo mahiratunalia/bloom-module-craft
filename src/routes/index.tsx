@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import heroImage from "@/assets/hero-dhaka.jpg";
-import { Signal, TrustScoreBadge, VerifiedBadge } from "@/components/trust";
+import { CredibilityStrip, Signal, TrustScoreBadge } from "@/components/trust";
 import {
   bdt,
   formatDate,
@@ -11,6 +11,8 @@ import {
   trustScore,
   type RoomType,
 } from "@/data/module1";
+import { useSession } from "@/hooks/use-session";
+import { useSavedListings, useToggleSavedListing } from "@/lib/user-data";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -35,6 +37,10 @@ const roomTypes: (RoomType | "Any")[] = ["Any", "Single room", "Shared mess", "S
 const areas = ["Any area", ...Array.from(new Set(listings.map((l) => l.area)))];
 
 function SearchPage() {
+  const { user } = useSession();
+  const saved = useSavedListings(user?.id);
+  const toggleSaved = useToggleSavedListing(user?.id);
+  const savedIds = new Set((saved.data ?? []).map((s) => s.listing_id));
   const [area, setArea] = useState("Any area");
   const [roomType, setRoomType] = useState<RoomType | "Any">("Any");
   const [maxRent, setMaxRent] = useState(20000);
@@ -143,12 +149,13 @@ function SearchPage() {
         <ul className="mt-6 divide-y divide-border border-y border-border">
           {results.map((l) => {
             const owner = getLandlord(l.landlordId);
+            const isSaved = savedIds.has(l.id);
             return (
-              <li key={l.id}>
+              <li key={l.id} className="py-6 transition-colors hover:bg-secondary/40 sm:px-3">
                 <Link
                   to="/listings/$listingId"
                   params={{ listingId: l.id }}
-                  className="group grid gap-6 py-6 transition-colors hover:bg-secondary/50 sm:grid-cols-[220px_1fr_auto] sm:px-3"
+                  className="group grid gap-6 sm:grid-cols-[220px_1fr_auto]"
                 >
                   <img
                     src={l.photo}
@@ -167,11 +174,8 @@ function SearchPage() {
                     <p className="mt-2 text-sm text-muted-foreground">
                       {owner.name} · available {formatDate(l.availableFrom)} · {l.applicants} applicants
                     </p>
-                    <div className="mt-4 flex flex-wrap items-center gap-3">
-                      {owner.verified && <VerifiedBadge since={owner.verifiedSince} />}
-                      <span className="font-mono text-[11px] text-muted-foreground">
-                        {owner.responseRate}% response · {owner.completedRentals} completed rentals
-                      </span>
+                    <div className="mt-4">
+                      <CredibilityStrip owner={owner} />
                     </div>
                   </div>
                   <div className="flex flex-row items-end justify-between gap-6 sm:flex-col sm:items-end sm:justify-start">
@@ -182,6 +186,28 @@ function SearchPage() {
                     <TrustScoreBadge breakdown={owner.trust} />
                   </div>
                 </Link>
+                <div className="mt-4 flex justify-end sm:mt-2">
+                  {user ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleSaved.mutate({ listingId: l.id, saved: isSaved })}
+                      className={`border px-3 py-1.5 text-xs transition-colors ${
+                        isSaved
+                          ? "border-foreground bg-foreground text-paper"
+                          : "border-border hover:bg-secondary"
+                      }`}
+                    >
+                      {isSaved ? "★ Saved" : "☆ Save listing"}
+                    </button>
+                  ) : (
+                    <Link
+                      to="/auth"
+                      className="border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary"
+                    >
+                      Sign in to save
+                    </Link>
+                  )}
+                </div>
               </li>
             );
           })}
