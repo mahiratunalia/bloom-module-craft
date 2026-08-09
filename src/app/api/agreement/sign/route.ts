@@ -1,0 +1,51 @@
+import { NextResponse, NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+
+const DATA_URL_RE = /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/;
+const MAX_SIGNATURE_LENGTH = 300_000; // ~220KB decoded, plenty for a signature PNG
+
+const schema = z.object({
+  draftId: z.string().min(1),
+  role: z.enum(["tenant", "landlord"]),
+  signature: z
+    .string()
+    .min(1)
+    .max(MAX_SIGNATURE_LENGTH)
+    .regex(DATA_URL_RE, "Invalid signature image"),
+});
+
+export async function POST(request: NextRequest) {
+  const token = await getToken({
+    req: request,
+    secret: process.env.AUTH_SECRET ?? "baskhuji-dev-secret",
+  });
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await request.json().catch(() => null);
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.errors[0]?.message ?? "Invalid payload" },
+      { status: 400 },
+    );
+  }
+
+  const draft = await prisma.agreementDraft.findUnique({ where: { id: parsed.data.draftId } });
+  if (!draft) return NextResponse.json({ error: "Draft not found" }, { status: 404 });
+
+  const now = new Date();
+  const data =
+    parsed.data.role === "tenant"
+      ? { tenantSignature: parsed.data.signature, tenantSignedAt: now }
+      : { landlordSignature: parsed.data.signature, landlordSignedAt: now };
+
+  const updated = await prisma.agreementDraft.update({ where: { id: draft.id }, data });
+
+  return NextResponse.json({
+    tenantSigned: !!updated.tenantSignature,
+    landlordSigned: !!updated.landlordSignature,
+    signedAt: now.toISOString(),
+  });
+}

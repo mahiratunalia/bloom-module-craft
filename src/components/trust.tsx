@@ -17,7 +17,9 @@ export function TrustScoreBadge({
   const dims = size === "lg" ? "text-5xl" : size === "sm" ? "text-xl" : "text-3xl";
   return (
     <div className="flex items-baseline gap-2">
-      <span className={`font-mono tabular-nums leading-none ${dims} ${toneFor(score)}`}>{score}</span>
+      <span className={`font-mono tabular-nums leading-none ${dims} ${toneFor(score)}`}>
+        {score}
+      </span>
       <span className="eyebrow">Trust</span>
     </div>
   );
@@ -127,7 +129,9 @@ export function CredibilityStrip({
     <div className="w-full">
       <div className="flex flex-wrap items-center gap-2">
         <VerificationStatus
-          label={owner.verified ? `Identity & ownership · ${owner.verifiedSince}` : "Identity unverified"}
+          label={
+            owner.verified ? `Identity & ownership · ${owner.verifiedSince}` : "Identity unverified"
+          }
           state={owner.verified ? "verified" : "pending"}
           note="NID, property ownership proof and phone number checked by BasaKhuji"
         />

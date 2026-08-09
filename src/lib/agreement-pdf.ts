@@ -11,8 +11,8 @@ export type PdfAgreement = {
   rentLine: string;
   termLine: string;
   clauses: AgreementClause[];
-  tenantSigned: boolean;
-  landlordSigned: boolean;
+  tenantSignature: string | null;
+  landlordSignature: string | null;
 };
 
 const MARGIN = 56;
@@ -79,31 +79,42 @@ export function downloadAgreementPdf(a: PdfAgreement) {
     y += body.length * 14 + 16;
   });
 
-  newPageIfNeeded(110);
+  newPageIfNeeded(170);
   y += 10;
   doc.setDrawColor(160);
   doc.line(MARGIN, y, PAGE_W - MARGIN, y);
   y += 26;
 
   const half = CONTENT_W / 2;
-  const signature = (label: string, name: string, signed: boolean, x: number) => {
+  const imgW = Math.min(half - 24, 160);
+  const imgH = imgW * (40 / 130);
+  const lineY = 8 + imgH + 26;
+  const signature = (label: string, name: string, sig: string | null, x: number) => {
     doc.setFont("courier", "normal");
     doc.setFontSize(8);
     doc.setTextColor(110);
     doc.text(label.toUpperCase(), x, y);
-    doc.setFont("times", signed ? "italic" : "normal");
-    doc.setFontSize(signed ? 15 : 11);
-    doc.setTextColor(signed ? 20 : 150);
-    doc.text(signed ? name : "Not yet acknowledged", x, y + 22);
+    if (sig) {
+      doc.addImage(sig, "PNG", x, y + 8, imgW, imgH);
+    } else {
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(150);
+      doc.text("Not yet acknowledged", x, y + 8 + imgH / 2);
+    }
     doc.setDrawColor(180);
-    doc.line(x, y + 30, x + half - 24, y + 30);
+    doc.line(x, y + lineY, x + half - 24, y + lineY);
+    doc.setFont("times", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(20);
+    doc.text(name, x, y + lineY + 12);
     doc.setFont("courier", "normal");
     doc.setFontSize(8);
     doc.setTextColor(110);
-    doc.text(signed ? `Acknowledged ${a.generatedOn}` : "Pending", x, y + 42);
+    doc.text(sig ? `Acknowledged ${a.generatedOn}` : "Pending", x, y + lineY + 24);
   };
-  signature("Tenant", a.tenantName, a.tenantSigned, MARGIN);
-  signature("Landlord", a.landlordName, a.landlordSigned, MARGIN + half);
+  signature("Tenant", a.tenantName, a.tenantSignature, MARGIN);
+  signature("Landlord", a.landlordName, a.landlordSignature, MARGIN + half);
 
   doc.save(`BasaKhuji-agreement-${a.reference.replace(/\//g, "-")}.pdf`);
 }

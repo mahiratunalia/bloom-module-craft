@@ -1,61 +1,78 @@
-import { Link } from "@tanstack/react-router";
+"use client";
 
-import { useSession } from "@/hooks/use-session";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { CircleUserRound } from "lucide-react";
+import { ThemeToggle } from "./theme-toggle";
 
-const nav = [
+const staticNav = [
   { to: "/", label: "Search" },
   { to: "/landlord", label: "Landlord desk" },
-  { to: "/roommates", label: "Roommates" },
   { to: "/agreement", label: "Agreement" },
 ] as const;
 
 export function SiteHeader() {
-  const { user, loading } = useSession();
+  const { data: session, status } = useSession();
+  const isLandlord =
+    session?.user?.role === "LANDLORD" || session?.user?.accountType === "landlord";
+  const isAdmin = session?.user?.role === "ADMIN";
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-paper/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-5">
-        <Link to="/" className="flex items-baseline gap-2">
-          <span className="font-display text-2xl leading-none">BasaKhuji</span>
+        <Link href="/" className="flex items-baseline gap-2">
+          <span className="font-display text-xl font-bold uppercase leading-none tracking-tight">
+            BasaKhuji
+          </span>
           <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground sm:inline">
             Module 1
           </span>
         </Link>
         <nav className="flex items-center gap-1">
-          {nav.map((item) => (
+          {staticNav.map((item) => (
             <Link
               key={item.to}
-              to={item.to}
-              activeOptions={{ exact: item.to === "/" }}
-              activeProps={{ className: "border-foreground text-foreground" }}
-              inactiveProps={{ className: "border-transparent text-muted-foreground hover:text-foreground" }}
-              className="border-b-2 px-2 py-1 text-[13px] transition-colors sm:px-3"
+              className="border-b-2 border-transparent px-2 py-1 text-[13px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground sm:px-3"
+              href={item.to}
             >
               {item.label}
             </Link>
           ))}
-          {!loading && (
+          {!isLandlord && (
             <Link
-              to={user ? "/profile" : "/auth"}
-              activeProps={{ className: "border-foreground text-foreground" }}
-              inactiveProps={{ className: "border-transparent text-muted-foreground hover:text-foreground" }}
-              className="ml-1 border-b-2 px-2 py-1 text-[13px] transition-colors sm:px-3"
+              className="border-b-2 border-transparent px-2 py-1 text-[13px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground sm:px-3"
+              href="/roommates"
             >
-              {user ? "Profile" : "Sign in"}
+              Roommates
+            </Link>
+          )}
+          {isAdmin && (
+            <Link
+              className="border-b-2 border-transparent px-2 py-1 text-[13px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground sm:px-3"
+              href="/admin"
+            >
+              Admin
+            </Link>
+          )}
+          <ThemeToggle />
+          {status === "authenticated" ? (
+            <Link
+              href="/profile"
+              aria-label="Your profile"
+              className="ml-1 flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-opacity hover:opacity-85"
+            >
+              <CircleUserRound className="size-5" />
+            </Link>
+          ) : (
+            <Link
+              href="/auth"
+              className="ml-1 rounded-full bg-primary px-3.5 py-1.5 text-[13px] text-primary-foreground transition-opacity hover:opacity-85 sm:px-4"
+            >
+              Sign in
             </Link>
           )}
         </nav>
       </div>
     </header>
-  );
-}
-
-export function SiteFooter() {
-  return (
-    <footer className="mt-24 border-t border-border">
-      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-8 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <p>BasaKhuji — evidence-first rental ecosystem. Module 1: before &amp; during application.</p>
-        <p className="font-mono">CSE471 · Group 03</p>
-      </div>
-    </footer>
   );
 }

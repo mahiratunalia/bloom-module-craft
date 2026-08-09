@@ -1,0 +1,281 @@
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth/next";
+import Link from "next/link";
+
+import { authOptions } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { SignOutButton } from "./sign-out-button";
+import { DeleteButton } from "./delete-button";
+import { VerifyIdentity } from "./verify-identity";
+
+type RoommateSessionProfileData = {
+  budget?: number;
+  sleep?: string;
+  smoking?: string;
+  smokingNonNegotiable?: boolean;
+  study?: string;
+  visitors?: string;
+};
+
+const paymentBannerCopy: Record<string, string> = {
+  success: "Payment received — thanks! A receipt has been emailed to you.",
+  failed: "That payment failed. No charge was made — you can try again from your application.",
+  cancelled: "Payment cancelled. No charge was made.",
+};
+
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ payment?: string }>;
+}) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) redirect("/auth");
+
+  const { payment } = await searchParams;
+  const paymentBanner = payment ? (paymentBannerCopy[payment] ?? null) : null;
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    include: { profile: { include: { tenantVerification: true } } },
+  });
+
+  if (!user?.profile) redirect("/auth");
+
+  const [savedListings, applications, roommateSessions, agreementDrafts] = await Promise.all([
+    prisma.savedListing.findMany({
+      where: { profileId: user.profile.id },
+      include: { listing: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.application.findMany({
+      where: { profileId: user.profile.id },
+      include: { listing: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.roommateSession.findMany({
+      where: { profileId: user.profile.id },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.agreementDraft.findMany({
+      where: { profileId: user.profile.id },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  const profile = user.profile;
+
+  return (
+    <div className="mx-auto max-w-6xl px-5 py-12">
+      <header className="flex flex-wrap items-end justify-between gap-6 border-b border-border pb-8">
+        <div>
+          <p className="eyebrow">Profile</p>
+          <h1 className="mt-3 font-display text-4xl font-bold uppercase tracking-tight sm:text-5xl">
+            {profile.displayName || session.user.email}
+          </h1>
+          <p className="mt-3 font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+            {session.user.email} · {String(session.user.role).toLowerCase()}
+            {profile.accountType && ` · ${profile.accountType}`}
+          </p>
+        </div>
+        <SignOutButton />
+      </header>
+
+      {paymentBanner && (
+        <p
+          className={`mt-6 border-l-2 pl-3 text-sm ${payment === "success" ? "border-primary text-primary" : "border-destructive text-destructive"}`}
+        >
+          {paymentBanner}
+        </p>
+      )}
+
+      {/* Overview */}
+      <section className="mt-10">
+        <h2 className="text-2xl mb-6">Overview</h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {[
+            ["Email", session.user.email],
+            ["Account type", profile.accountType || "—"],
+            ["Saved listings", savedListings.length],
+            ["Applications", applications.length],
+          ].map(([label, value]) => (
+            <div
+              key={label as string}
+              className="rounded-2xl border border-border bg-[var(--card)] p-6"
+            >
+              <p className="eyebrow">{label}</p>
+              <p className="mt-2 font-mono text-sm">{value}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Identity verification (tenants only) */}
+      {profile.accountType === "tenant" && (
+        <section className="mt-12">
+          <h2 className="text-2xl mb-6">Identity verification</h2>
+          <VerifyIdentity
+            initialStatus={profile.tenantVerification?.status ?? null}
+            initialNote={profile.tenantVerification?.reviewNote ?? null}
+          />
+        </section>
+      )}
+
+      {/* Saved Listings */}
+      <section className="mt-12">
+        <h2 className="text-2xl mb-6">Saved listings ({savedListings.length})</h2>
+        {savedListings.length === 0 ? (
+          <Empty message="No saved listings yet." cta="Browse listings" href="/" />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {savedListings.map((saved) => (
+              <div key={saved.id} className="rounded-2xl border border-border bg-[var(--card)] p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <Link href={`/listings/${saved.listing.id}`} className="flex-1 hover:underline">
+                    <h3 className="font-medium">{saved.listing.title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{saved.listing.area}</p>
+                    <p className="mt-2 font-mono text-sm">
+                      ৳ {(saved.listing.rent || 0).toLocaleString()} / month
+                    </p>
+                  </Link>
+                  <DeleteButton id={saved.id} type="savedListing" />
+                </div>
+                <p className="mt-3 font-mono text-[11px] text-muted-foreground">
+                  Saved {new Date(saved.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Applications */}
+      <section className="mt-12">
+        <h2 className="text-2xl mb-6">Applications ({applications.length})</h2>
+        {applications.length === 0 ? (
+          <Empty message="No applications yet." cta="Find properties" href="/" />
+        ) : (
+          <div className="space-y-4">
+            {applications.map((app) => (
+              <div key={app.id} className="rounded-2xl border border-border bg-[var(--card)] p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="font-medium">{app.listing.title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{app.listing.area}</p>
+                    {app.note && (
+                      <p className="mt-2 text-sm italic text-muted-foreground">
+                        &quot;{app.note}&quot;
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                      {app.status}
+                    </span>
+                    <DeleteButton id={app.id} type="application" />
+                  </div>
+                </div>
+                <p className="mt-3 font-mono text-[11px] text-muted-foreground">
+                  Applied {new Date(app.createdAt).toLocaleDateString()}
+                </p>
+                {app.status === "accepted" && (
+                  <Link
+                    href={`/agreement?applicationId=${app.id}`}
+                    className="mt-3 inline-block text-sm underline underline-offset-4"
+                  >
+                    View agreement →
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Roommate Sessions */}
+      <section className="mt-12">
+        <h2 className="text-2xl mb-6">Matching sessions ({roommateSessions.length})</h2>
+        {roommateSessions.length === 0 ? (
+          <Empty
+            message="No matching sessions saved yet."
+            cta="Start compatibility matcher"
+            href="/roommates"
+          />
+        ) : (
+          <div className="space-y-4">
+            {roommateSessions.map((s) => {
+              const pd = s.profileData as RoommateSessionProfileData;
+              const results = s.results as unknown[];
+              return (
+                <div key={s.id} className="rounded-2xl border border-border bg-[var(--card)] p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="font-medium">{s.label}</h3>
+                      <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-1 text-xs text-muted-foreground sm:grid-cols-3">
+                        <span>Budget: ৳{(pd?.budget || 0).toLocaleString()}</span>
+                        <span>Sleep: {pd?.sleep || "—"}</span>
+                        <span>
+                          Smoking: {pd?.smoking || "—"}
+                          {pd?.smokingNonNegotiable ? " (non-neg.)" : ""}
+                        </span>
+                        <span>Study: {pd?.study || "—"}</span>
+                        <span>Visitors: {pd?.visitors || "—"}</span>
+                        <span>{results.length} candidates scored</span>
+                      </div>
+                    </div>
+                    <DeleteButton id={s.id} type="roommateSession" />
+                  </div>
+                  <p className="mt-3 font-mono text-[11px] text-muted-foreground">
+                    Saved {new Date(s.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <div className="mt-4">
+          <Link href="/roommates" className="text-sm underline underline-offset-4">
+            Run a new matching session →
+          </Link>
+        </div>
+      </section>
+
+      {/* Agreement Drafts */}
+      <section className="mt-12">
+        <h2 className="text-2xl mb-6">Agreement drafts ({agreementDrafts.length})</h2>
+        {agreementDrafts.length === 0 ? (
+          <Empty message="No agreement drafts yet." cta="Go to agreement page" href="/agreement" />
+        ) : (
+          <div className="space-y-4">
+            {agreementDrafts.map((d) => (
+              <div key={d.id} className="rounded-2xl border border-border bg-[var(--card)] p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="font-medium font-mono">{d.reference}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground capitalize">
+                      {d.source} · {(d.clausesJson as unknown[]).length} clauses
+                    </p>
+                  </div>
+                  <DeleteButton id={d.id} type="agreementDraft" />
+                </div>
+                <p className="mt-3 font-mono text-[11px] text-muted-foreground">
+                  Generated {new Date(d.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function Empty({ message, cta, href }: { message: string; cta: string; href: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+      <p className="text-sm text-muted-foreground">{message}</p>
+      <Link href={href} className="mt-4 inline-block text-sm underline underline-offset-4">
+        {cta}
+      </Link>
+    </div>
+  );
+}

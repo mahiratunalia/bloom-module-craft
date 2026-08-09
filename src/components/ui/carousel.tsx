@@ -95,6 +95,11 @@ const Carousel = React.forwardRef<
       return;
     }
 
+    // embla-carousel's own documented init pattern: prime the scroll-button state from
+    // the API object as soon as it's ready, then subscribe to future changes. This
+    // component has no call sites in the app yet, so left as embla's recommended shape
+    // rather than restructured against an integration nothing currently exercises.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     onSelect(api);
     api.on("reInit", onSelect);
     api.on("select", onSelect);

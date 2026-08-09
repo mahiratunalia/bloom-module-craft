@@ -1,0 +1,259 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TENANT
+  LANDLORD
+  ADMIN
+}
+
+enum AccountType {
+  tenant
+  landlord
+}
+
+enum ApplicationStatus {
+  draft
+  submitted
+  shortlisted
+  accepted
+  declined
+}
+
+enum VerificationStatus {
+  pending
+  verified
+  rejected
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String
+  role          Role      @default(TENANT)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  profile       Profile?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Profile {
+  id                   String                @id @default(cuid())
+  userId               String                @unique
+  displayName          String
+  accountType          AccountType           @default(tenant)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedListings        SavedListing[]
+  applications         Application[]
+  roommatePreference   RoommatePreference?
+  roommateSessions     RoommateSession[]
+  shareLinks           ShareLink[]
+  agreementDrafts      AgreementDraft[]
+  landlordVerification LandlordVerification?
+  tenantVerification   TenantVerification?
+  adminInvitesCreated  AdminInvite[]
+}
+
+model Listing {
+  id            String         @id
+  title         String
+  description   String?
+  area          String
+  city          String
+  latitude      Float
+  longitude     Float
+  rent          Int
+  deposit       Int
+  roomType      String
+  availableFrom DateTime
+  status        String
+  postedOn      DateTime
+  landlordId    String
+  houseRules    String[]       @default([])
+  photoUrls     String[]       @default([])
+  sqft          Int?
+  savedBy       SavedListing[]
+  applications  Application[]
+  payments      Payment[]
+}
+
+model SavedListing {
+  id        String   @id @default(cuid())
+  profileId String
+  listingId String
+  createdAt DateTime @default(now())
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, listingId])
+}
+
+model Application {
+  id        String            @id @default(cuid())
+  profileId String
+  listingId String
+  note      String?
+  status    ApplicationStatus @default(submitted)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  profile   Profile           @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  listing   Listing           @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, listingId])
+}
+
+model RoommatePreference {
+  id                   String   @id @default(cuid())
+  profileId            String   @unique
+  budget               Int
+  sleep                String
+  smoking              String
+  smokingNonNegotiable Boolean  @default(false)
+  cooking              String   @default("Occasionally")
+  study                String
+  visitors             String
+  updatedAt            DateTime @updatedAt
+  profile              Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model RoommateSession {
+  id          String   @id @default(cuid())
+  profileId   String
+  label       String
+  profileData Json
+  results     Json
+  createdAt   DateTime @default(now())
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  transactionId String   @unique
+  listingId     String
+  profileId     String
+  amount        Int
+  month         String
+  status        String   @default("pending")
+  validationId  String?
+  createdAt     DateTime @default(now())
+  listing       Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum ShareLinkType {
+  agreement
+  roommate_session
+}
+
+model ShareLink {
+  id         String        @id @default(cuid())
+  token      String        @unique @default(cuid())
+  type       ShareLinkType
+  resourceId String
+  profileId  String
+  revoked    Boolean       @default(false)
+  expiresAt  DateTime
+  createdAt  DateTime      @default(now())
+  profile    Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model LandlordVerification {
+  id                String             @id @default(cuid())
+  profileId         String             @unique
+  nidNumber         String
+  phone             String
+  propertyAddress   String
+  nidPhotoUrl       String?            @db.Text
+  ownershipProofUrl String?            @db.Text
+  status            VerificationStatus @default(pending)
+  reviewNote        String?
+  submittedAt       DateTime           @default(now())
+  reviewedAt        DateTime?
+  profile           Profile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model TenantVerification {
+  id          String             @id @default(cuid())
+  profileId   String             @unique
+  nidNumber   String
+  phone       String
+  nidPhotoUrl String?            @db.Text
+  status      VerificationStatus @default(pending)
+  reviewNote  String?
+  submittedAt DateTime           @default(now())
+  reviewedAt  DateTime?
+  profile     Profile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model AgreementDraft {
+  id                String    @id @default(cuid())
+  profileId         String
+  reference         String
+  termsJson         Json
+  clausesJson       Json
+  source            String
+  createdAt         DateTime  @default(now())
+  tenantSignature   String?   @db.Text
+  tenantSignedAt    DateTime?
+  landlordSignature String?   @db.Text
+  landlordSignedAt  DateTime?
+  profile           Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, reference])
+}
+
+model AdminInvite {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  createdById String
+  usedByEmail String?
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime
+  createdBy   Profile   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+}

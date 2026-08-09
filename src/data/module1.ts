@@ -1,6 +1,7 @@
 import listing1 from "@/assets/listing-1.jpg";
 import listing2 from "@/assets/listing-2.jpg";
 import listing3 from "@/assets/listing-3.jpg";
+import type { StaticImageData } from "next/image";
 
 export type RoomType = "Single room" | "Shared mess" | "Studio" | "Full flat";
 
@@ -13,13 +14,43 @@ export type TrustBreakdown = {
   agreements: number;
 };
 
-export const TRUST_WEIGHTS: { key: keyof TrustBreakdown; label: string; weight: number; measures: string }[] = [
-  { key: "payment", label: "Payment history", weight: 0.25, measures: "Receipt confirmation & deposit-return timeliness" },
-  { key: "maintenance", label: "Maintenance response", weight: 0.2, measures: "Average request resolution time" },
-  { key: "disputes", label: "Dispute outcomes", weight: 0.2, measures: "Share resolved in favour or no fault found" },
-  { key: "verification", label: "Profile verification", weight: 0.15, measures: "NID, ownership proof and phone verified" },
+export const TRUST_WEIGHTS: {
+  key: keyof TrustBreakdown;
+  label: string;
+  weight: number;
+  measures: string;
+}[] = [
+  {
+    key: "payment",
+    label: "Payment history",
+    weight: 0.25,
+    measures: "Receipt confirmation & deposit-return timeliness",
+  },
+  {
+    key: "maintenance",
+    label: "Maintenance response",
+    weight: 0.2,
+    measures: "Average request resolution time",
+  },
+  {
+    key: "disputes",
+    label: "Dispute outcomes",
+    weight: 0.2,
+    measures: "Share resolved in favour or no fault found",
+  },
+  {
+    key: "verification",
+    label: "Profile verification",
+    weight: 0.15,
+    measures: "NID, ownership proof and phone verified",
+  },
   { key: "reviews", label: "Review rating", weight: 0.1, measures: "Average of category ratings" },
-  { key: "agreements", label: "Agreement completion", weight: 0.1, measures: "Leases completed on original terms" },
+  {
+    key: "agreements",
+    label: "Agreement completion",
+    weight: 0.1,
+    measures: "Leases completed on original terms",
+  },
 ];
 
 export function trustScore(b: TrustBreakdown): number {
@@ -40,33 +71,54 @@ export type Landlord = {
 export const landlordsById: Record<string, Landlord> = {
   "ll-1": {
     id: "ll-1",
-    name: "Rezaul Karim",
+    name: "mahiya",
     verified: true,
     verifiedSince: "Mar 2024",
     responseRate: 96,
     avgResponseHours: 4,
     completedRentals: 11,
-    trust: { payment: 94, maintenance: 90, disputes: 88, verification: 100, reviews: 86, agreements: 92 },
+    trust: {
+      payment: 94,
+      maintenance: 90,
+      disputes: 88,
+      verification: 100,
+      reviews: 86,
+      agreements: 92,
+    },
   },
   "ll-2": {
     id: "ll-2",
-    name: "Shirin Akter",
+    name: "zisan",
     verified: true,
     verifiedSince: "Sep 2024",
     responseRate: 81,
     avgResponseHours: 19,
     completedRentals: 4,
-    trust: { payment: 78, maintenance: 66, disputes: 80, verification: 100, reviews: 72, agreements: 70 },
+    trust: {
+      payment: 78,
+      maintenance: 66,
+      disputes: 80,
+      verification: 100,
+      reviews: 72,
+      agreements: 70,
+    },
   },
   "ll-3": {
     id: "ll-3",
-    name: "Anwar Hossain",
+    name: "navid",
     verified: true,
     verifiedSince: "Jan 2025",
     responseRate: 88,
     avgResponseHours: 9,
     completedRentals: 7,
-    trust: { payment: 85, maintenance: 74, disputes: 62, verification: 100, reviews: 80, agreements: 84 },
+    trust: {
+      payment: 85,
+      maintenance: 74,
+      disputes: 62,
+      verification: 100,
+      reviews: 80,
+      agreements: 84,
+    },
   },
 };
 
@@ -82,7 +134,7 @@ export type Listing = {
   roomType: RoomType;
   availableFrom: string;
   houseRules: string[];
-  photo: string;
+  photo: StaticImageData;
   photoAlt: string;
   landlordId: string;
   status: "Active" | "Draft" | "Rented";
@@ -97,7 +149,11 @@ export const listings: Listing[] = [
     area: "Shantinagar",
     city: "Dhaka",
     coords: { lat: 23.7423, lng: 90.4098 },
-    landmarks: ["Bailey Road — 400 m", "Shantinagar bus stop — 260 m", "Ibn Sina Diagnostic — 700 m"],
+    landmarks: [
+      "Bailey Road — 400 m",
+      "Shantinagar bus stop — 260 m",
+      "Ibn Sina Diagnostic — 700 m",
+    ],
     rent: 9500,
     deposit: 19000,
     roomType: "Single room",
@@ -116,7 +172,11 @@ export const listings: Listing[] = [
     area: "Mohammadpur",
     city: "Dhaka",
     coords: { lat: 23.7639, lng: 90.3589 },
-    landmarks: ["Town Hall Market — 550 m", "Mohammadpur Bus Stand — 900 m", "Sir Syed Road — 300 m"],
+    landmarks: [
+      "Town Hall Market — 550 m",
+      "Mohammadpur Bus Stand — 900 m",
+      "Sir Syed Road — 300 m",
+    ],
     rent: 6200,
     deposit: 6200,
     roomType: "Shared mess",
@@ -162,9 +222,17 @@ export type Applicant = {
   disputes: number;
   trust: TrustBreakdown;
   note: string;
+  budget: number;
+  sleep: "Early" | "Flexible" | "Late";
+  smoking: "No" | "Tolerant" | "Yes";
+  smokingNonNegotiable: boolean;
+  cooking: "Rarely" | "Occasionally" | "Daily";
+  study: "Quiet" | "Mixed" | "Social";
+  visitors: "Rare" | "Occasional" | "Frequent";
 };
 
 export const applicants: Applicant[] = [
+  // bk-1041 applicants (mahiya)
   {
     id: "ap-1",
     name: "Tanzila Rahman",
@@ -175,8 +243,22 @@ export const applicants: Applicant[] = [
     phoneVerified: true,
     onTimePaymentRate: 97,
     disputes: 0,
-    trust: { payment: 97, maintenance: 88, disputes: 100, verification: 100, reviews: 90, agreements: 95 },
+    trust: {
+      payment: 97,
+      maintenance: 88,
+      disputes: 100,
+      verification: 100,
+      reviews: 90,
+      agreements: 95,
+    },
     note: "Two prior tenancies completed on original terms.",
+    budget: 9500,
+    sleep: "Early",
+    smoking: "No",
+    smokingNonNegotiable: true,
+    cooking: "Occasionally",
+    study: "Quiet",
+    visitors: "Rare",
   },
   {
     id: "ap-2",
@@ -188,8 +270,22 @@ export const applicants: Applicant[] = [
     phoneVerified: true,
     onTimePaymentRate: 84,
     disputes: 1,
-    trust: { payment: 84, maintenance: 70, disputes: 65, verification: 100, reviews: 76, agreements: 80 },
+    trust: {
+      payment: 84,
+      maintenance: 70,
+      disputes: 65,
+      verification: 100,
+      reviews: 76,
+      agreements: 80,
+    },
     note: "One deposit dispute, resolved with no fault found.",
+    budget: 10000,
+    sleep: "Late",
+    smoking: "Tolerant",
+    smokingNonNegotiable: false,
+    cooking: "Rarely",
+    study: "Mixed",
+    visitors: "Occasional",
   },
   {
     id: "ap-3",
@@ -201,8 +297,22 @@ export const applicants: Applicant[] = [
     phoneVerified: false,
     onTimePaymentRate: 91,
     disputes: 0,
-    trust: { payment: 91, maintenance: 82, disputes: 100, verification: 65, reviews: 84, agreements: 88 },
+    trust: {
+      payment: 91,
+      maintenance: 82,
+      disputes: 100,
+      verification: 65,
+      reviews: 84,
+      agreements: 88,
+    },
     note: "Phone verification pending since 21 July.",
+    budget: 9000,
+    sleep: "Early",
+    smoking: "No",
+    smokingNonNegotiable: false,
+    cooking: "Daily",
+    study: "Quiet",
+    visitors: "Rare",
   },
   {
     id: "ap-4",
@@ -214,8 +324,267 @@ export const applicants: Applicant[] = [
     phoneVerified: true,
     onTimePaymentRate: 62,
     disputes: 2,
-    trust: { payment: 62, maintenance: 55, disputes: 40, verification: 35, reviews: 58, agreements: 50 },
+    trust: {
+      payment: 62,
+      maintenance: 55,
+      disputes: 40,
+      verification: 35,
+      reviews: 58,
+      agreements: 50,
+    },
     note: "First-come applicant — ranked last on record, not on timing.",
+    budget: 11000,
+    sleep: "Late",
+    smoking: "Yes",
+    smokingNonNegotiable: false,
+    cooking: "Rarely",
+    study: "Social",
+    visitors: "Frequent",
+  },
+  // bk-1042 applicants (zisan)
+  {
+    id: "ap-5",
+    name: "Mehedi Hasan",
+    occupation: "Undergraduate, Dhaka College",
+    listingId: "bk-1042",
+    appliedOn: "2026-07-28",
+    nidVerified: true,
+    phoneVerified: true,
+    onTimePaymentRate: 100,
+    disputes: 0,
+    trust: {
+      payment: 100,
+      maintenance: 92,
+      disputes: 100,
+      verification: 100,
+      reviews: 94,
+      agreements: 98,
+    },
+    note: "First tenancy — no prior record, but fully verified.",
+    budget: 6000,
+    sleep: "Early",
+    smoking: "No",
+    smokingNonNegotiable: true,
+    cooking: "Occasionally",
+    study: "Quiet",
+    visitors: "Rare",
+  },
+  {
+    id: "ap-6",
+    name: "Raihan Uddin",
+    occupation: "Garments QC officer",
+    listingId: "bk-1042",
+    appliedOn: "2026-07-25",
+    nidVerified: true,
+    phoneVerified: true,
+    onTimePaymentRate: 88,
+    disputes: 1,
+    trust: {
+      payment: 88,
+      maintenance: 75,
+      disputes: 60,
+      verification: 100,
+      reviews: 80,
+      agreements: 82,
+    },
+    note: "One minor dispute resolved in tenant's favour.",
+    budget: 6500,
+    sleep: "Flexible",
+    smoking: "Tolerant",
+    smokingNonNegotiable: false,
+    cooking: "Daily",
+    study: "Mixed",
+    visitors: "Occasional",
+  },
+  {
+    id: "ap-7",
+    name: "Sadia Islam",
+    occupation: "Intern, BRAC NGO",
+    listingId: "bk-1042",
+    appliedOn: "2026-07-23",
+    nidVerified: true,
+    phoneVerified: false,
+    onTimePaymentRate: 79,
+    disputes: 0,
+    trust: {
+      payment: 79,
+      maintenance: 68,
+      disputes: 100,
+      verification: 65,
+      reviews: 72,
+      agreements: 74,
+    },
+    note: "Phone verification still pending.",
+    budget: 5800,
+    sleep: "Early",
+    smoking: "No",
+    smokingNonNegotiable: true,
+    cooking: "Occasionally",
+    study: "Quiet",
+    visitors: "Rare",
+  },
+  {
+    id: "ap-8",
+    name: "Karim Molla",
+    occupation: "Rickshaw workshop owner",
+    listingId: "bk-1042",
+    appliedOn: "2026-07-22",
+    nidVerified: false,
+    phoneVerified: true,
+    onTimePaymentRate: 55,
+    disputes: 3,
+    trust: {
+      payment: 55,
+      maintenance: 48,
+      disputes: 30,
+      verification: 30,
+      reviews: 50,
+      agreements: 44,
+    },
+    note: "Three disputes on record — two unresolved.",
+    budget: 7000,
+    sleep: "Late",
+    smoking: "Yes",
+    smokingNonNegotiable: false,
+    cooking: "Daily",
+    study: "Social",
+    visitors: "Frequent",
+  },
+  {
+    id: "ap-9",
+    name: "Farida Begum",
+    occupation: "School teacher, Mohammadpur",
+    listingId: "bk-1042",
+    appliedOn: "2026-07-24",
+    nidVerified: true,
+    phoneVerified: true,
+    onTimePaymentRate: 93,
+    disputes: 0,
+    trust: {
+      payment: 93,
+      maintenance: 85,
+      disputes: 100,
+      verification: 100,
+      reviews: 88,
+      agreements: 90,
+    },
+    note: "Stable employment, three prior tenancies completed.",
+    budget: 6200,
+    sleep: "Early",
+    smoking: "No",
+    smokingNonNegotiable: false,
+    cooking: "Occasionally",
+    study: "Quiet",
+    visitors: "Rare",
+  },
+  {
+    id: "ap-10",
+    name: "Arif Billah",
+    occupation: "Delivery coordinator",
+    listingId: "bk-1042",
+    appliedOn: "2026-07-26",
+    nidVerified: true,
+    phoneVerified: true,
+    onTimePaymentRate: 72,
+    disputes: 1,
+    trust: {
+      payment: 72,
+      maintenance: 60,
+      disputes: 65,
+      verification: 100,
+      reviews: 66,
+      agreements: 68,
+    },
+    note: "One late-payment dispute, settled amicably.",
+    budget: 6800,
+    sleep: "Late",
+    smoking: "Tolerant",
+    smokingNonNegotiable: false,
+    cooking: "Rarely",
+    study: "Mixed",
+    visitors: "Occasional",
+  },
+  // bk-1043 applicants (navid)
+  {
+    id: "ap-11",
+    name: "Tahmina Akter",
+    occupation: "Software engineer, Uttara",
+    listingId: "bk-1043",
+    appliedOn: "2026-07-20",
+    nidVerified: true,
+    phoneVerified: true,
+    onTimePaymentRate: 98,
+    disputes: 0,
+    trust: {
+      payment: 98,
+      maintenance: 94,
+      disputes: 100,
+      verification: 100,
+      reviews: 92,
+      agreements: 96,
+    },
+    note: "Four completed tenancies, all on original terms.",
+    budget: 14000,
+    sleep: "Early",
+    smoking: "No",
+    smokingNonNegotiable: true,
+    cooking: "Occasionally",
+    study: "Quiet",
+    visitors: "Rare",
+  },
+  {
+    id: "ap-12",
+    name: "Nazmul Hoque",
+    occupation: "Air traffic controller trainee",
+    listingId: "bk-1043",
+    appliedOn: "2026-07-15",
+    nidVerified: true,
+    phoneVerified: true,
+    onTimePaymentRate: 90,
+    disputes: 0,
+    trust: {
+      payment: 90,
+      maintenance: 82,
+      disputes: 100,
+      verification: 100,
+      reviews: 85,
+      agreements: 88,
+    },
+    note: "Stable income, no disputes on record.",
+    budget: 13500,
+    sleep: "Flexible",
+    smoking: "No",
+    smokingNonNegotiable: false,
+    cooking: "Daily",
+    study: "Mixed",
+    visitors: "Occasional",
+  },
+  {
+    id: "ap-13",
+    name: "Rubel Mia",
+    occupation: "Freelance photographer",
+    listingId: "bk-1043",
+    appliedOn: "2026-07-10",
+    nidVerified: false,
+    phoneVerified: true,
+    onTimePaymentRate: 68,
+    disputes: 2,
+    trust: {
+      payment: 68,
+      maintenance: 58,
+      disputes: 45,
+      verification: 35,
+      reviews: 62,
+      agreements: 55,
+    },
+    note: "NID not yet submitted. Two disputes, one unresolved.",
+    budget: 15000,
+    sleep: "Late",
+    smoking: "Yes",
+    smokingNonNegotiable: false,
+    cooking: "Rarely",
+    study: "Social",
+    visitors: "Frequent",
   },
 ];
 
@@ -279,29 +648,21 @@ export type RoommateProfile = {
   sleep: "Early" | "Flexible" | "Late";
   smoking: "No" | "Tolerant" | "Yes";
   smokingNonNegotiable: boolean;
+  cooking: "Rarely" | "Occasionally" | "Daily";
   study: "Quiet" | "Mixed" | "Social";
   visitors: "Rare" | "Occasional" | "Frequent";
 };
-
-export type RoommateCandidate = RoommateProfile & {
-  id: string;
-  name: string;
-  detail: string;
-};
-
-export const roommateCandidates: RoommateCandidate[] = [
-  { id: "rm-1", name: "Farhan Islam", detail: "CSE student, Mohammadpur mess", budget: 6000, sleep: "Late", smoking: "No", smokingNonNegotiable: true, study: "Quiet", visitors: "Rare" },
-  { id: "rm-2", name: "Ratul Das", detail: "Bank trainee, moving in September", budget: 7500, sleep: "Early", smoking: "Tolerant", smokingNonNegotiable: false, study: "Mixed", visitors: "Occasional" },
-  { id: "rm-3", name: "Mahin Sarker", detail: "Freelance designer, night worker", budget: 9000, sleep: "Late", smoking: "Yes", smokingNonNegotiable: false, study: "Social", visitors: "Frequent" },
-  { id: "rm-4", name: "Ayaan Kabir", detail: "Medical student, Shantinagar", budget: 6500, sleep: "Early", smoking: "No", smokingNonNegotiable: true, study: "Quiet", visitors: "Rare" },
-];
 
 const scale = <T extends string>(order: T[], a: T, b: T) => {
   const d = Math.abs(order.indexOf(a) - order.indexOf(b));
   return Math.max(0, 1 - d / (order.length - 1));
 };
 
-/** Budget 30 · Sleep 20 · Smoking 20 (hard filter) · Study 15 · Visitors 15 */
+/**
+ * Budget 30 · Sleep 20 · Smoking 20 (hard filter) · Study 15 · Visitors 15 — matches the proposal's
+ * weighted-scoring algorithm exactly. Cooking habits are still collected on the preference form (the
+ * proposal lists it among the inputs) but aren't part of the scored formula, so they don't factor in here.
+ */
 export function compatibility(a: RoommateProfile, b: RoommateProfile) {
   const hardBlocked =
     (a.smokingNonNegotiable || b.smokingNonNegotiable) &&
@@ -325,12 +686,46 @@ export function compatibility(a: RoommateProfile, b: RoommateProfile) {
   return { total: hardBlocked ? 0 : total, parts, hardBlocked };
 }
 
+export type ApplicantCompatibilityPair = {
+  applicantAId: string;
+  applicantBId: string;
+  applicantAName: string;
+  applicantBName: string;
+  score: number;
+  hardBlocked: boolean;
+};
+
 export const bdt = (n: number) => `৳${n.toLocaleString("en-BD")}`;
 
-export const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+export const formatDate = (iso: string) => {
+  const d = new Date(iso);
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+};
+const unknownLandlord: Landlord = {
+  id: "unknown",
+  name: "Landlord",
+  verified: false,
+  verifiedSince: "—",
+  responseRate: 0,
+  avgResponseHours: 0,
+  completedRentals: 0,
+  trust: { payment: 0, maintenance: 0, disputes: 0, verification: 0, reviews: 0, agreements: 0 },
+};
+
 export function getLandlord(id: string): Landlord {
-  const found = landlordsById[id];
-  if (!found) throw new Error(`Unknown landlord: ${id}`);
-  return found;
+  return landlordsById[id] ?? unknownLandlord;
 }
