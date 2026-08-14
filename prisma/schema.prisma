@@ -66,6 +66,7 @@ model Profile {
   tenantVerification   TenantVerification?
   adminInvitesCreated  AdminInvite[]
   reviewsWritten       Review[]
+  activityEvents       ActivityEvent[]
 }
 
 model Listing {
@@ -89,6 +90,7 @@ model Listing {
   savedBy       SavedListing[]
   applications  Application[]
   payments      Payment[]
+  activityEvents ActivityEvent[]
 }
 
 model SavedListing {
@@ -165,6 +167,27 @@ model Payment {
   validationId  String?
   createdAt     DateTime @default(now())
   listing       Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+// Append-only audit trail for a tenancy (one listing + one tenant profile).
+// No update/delete route exists for this model on purpose — the timeline is
+// meant to be tamper-evident, so events are only ever created by server-side
+// actions (agreement signing, payment outcomes, and future maintenance/repair/
+// checkout events from other modules), never edited by a client.
+model ActivityEvent {
+  id              String   @id @default(cuid())
+  listingId       String
+  tenantProfileId String
+  type            String
+  actor           String
+  summary         String
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  listing       Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  tenantProfile Profile @relation(fields: [tenantProfileId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, tenantProfileId])
 }
 
 model Account {

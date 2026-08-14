@@ -1,56 +1,65 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { paymentReceiptEmail } from "@/lib/gmail.server";
+import { logActivity } from "@/lib/activity.server";
+import { finalizePayment } from "@/lib/payment.server";
 
+async function markFailed(transactionId: string, reason: string) {
+  const payment = await prisma.payment.findUnique({ where: { transactionId } });
+  if (!payment || payment.status === "paid") return;
+  await prisma.payment.update({ where: { transactionId }, data: { status: "failed" } });
+  await logActivity({
+    listingId: payment.listingId,
+    tenantProfileId: payment.profileId,
+    type: "payment_failed",
+    actor: "system",
+    summary: `Rent payment for ${payment.month} was not completed (${reason}).`,
+    metadata: { transactionId },
+  });
+}
+
+// SSLCOMMERZ's server-to-server IPN callback — the authoritative path in a real
+// deployment. Trusts nothing from the posted form directly: a success status
+// still goes through finalizePayment(), which re-validates with SSLCOMMERZ
+// before marking anything paid.
 export async function POST(request: Request) {
   const body = await request.formData().catch(() => null);
   if (!body) return NextResponse.json({ error: "Bad request" }, { status: 400 });
 
-  const status = body.get("status") as string;
-  const transactionId = body.get("tran_id") as string;
-  const validationId = body.get("val_id") as string;
+  const status = body.get("status") as string | null;
+  const transactionId = body.get("tran_id") as string | null;
+  const validationId = body.get("val_id") as string | null;
 
   if (!transactionId) return NextResponse.json({ error: "Missing tran_id" }, { status: 400 });
 
-  const payment = await prisma.payment.findUnique({ where: { transactionId } });
-  if (!payment) return NextResponse.json({ error: "Payment not found" }, { status: 404 });
-
   if (status === "VALID" || status === "VALIDATED") {
-    await prisma.payment.update({
-      where: { transactionId },
-      data: { status: "paid", validationId },
-    });
-
-    // Send receipt email
-    const profile = await prisma.profile.findUnique({
-      where: { id: payment.profileId },
-      include: { user: true },
-    });
-    if (profile?.user.email) {
-      await paymentReceiptEmail(
-        profile.user.email,
-        profile.displayName,
-        payment.amount,
-        payment.month,
-      );
-    }
+    await finalizePayment(transactionId, validationId);
   } else {
-    await prisma.payment.update({
-      where: { transactionId },
-      data: { status: "failed" },
-    });
+    await markFailed(transactionId, status || "cancelled");
   }
 
   return NextResponse.json({ received: true });
 }
 
-// SSLCOMMERZ also hits IPN via GET redirect for success/fail/cancel
+// SSLCOMMERZ also redirects the tenant's browser to success/fail/cancel URLs.
+// IPN webhooks can't reach a localhost dev server, so this redirect path also
+// finalizes the payment when tran_id/val_id are present — same validated,
+// idempotent finalizePayment() call, so it's safe even if IPN also fires.
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
-  if (status === "success")
+  const transactionId = searchParams.get("tran_id");
+  const validationId = searchParams.get("val_id");
+
+  if (status === "success" && transactionId) {
+    await finalizePayment(transactionId, validationId).catch((error) =>
+      console.error("finalizePayment (redirect) failed:", error),
+    );
     return NextResponse.redirect(new URL("/profile?payment=success", request.url));
-  if (status === "fail")
+  }
+  if (status === "fail") {
+    if (transactionId) await markFailed(transactionId, "fail").catch(() => {});
     return NextResponse.redirect(new URL("/profile?payment=failed", request.url));
+  }
+  if (transactionId) await markFailed(transactionId, "cancelled").catch(() => {});
   return NextResponse.redirect(new URL("/profile?payment=cancelled", request.url));
 }

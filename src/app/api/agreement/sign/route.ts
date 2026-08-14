@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/activity.server";
 
 const DATA_URL_RE = /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/;
 const MAX_SIGNATURE_LENGTH = 300_000; // ~220KB decoded, plenty for a signature PNG
@@ -32,7 +33,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const draft = await prisma.agreementDraft.findUnique({ where: { id: parsed.data.draftId } });
+  const draft = await prisma.agreementDraft.findUnique({
+    where: { id: parsed.data.draftId },
+    include: { profile: true },
+  });
   if (!draft) return NextResponse.json({ error: "Draft not found" }, { status: 404 });
 
   const now = new Date();
@@ -42,6 +46,37 @@ export async function POST(request: NextRequest) {
       : { landlordSignature: parsed.data.signature, landlordSignedAt: now };
 
   const updated = await prisma.agreementDraft.update({ where: { id: draft.id }, data });
+
+  // The draft's own profileId is the tenant's in the normal (and shared-listing)
+  // flow — it's what disambiguates which tenant's agreement this is. Only log
+  // against the tenant-scoped timeline when that holds; skip otherwise rather
+  // than mis-attributing an event to the wrong party.
+  const listingId = draft.reference.split("/")[0];
+  if (listingId && draft.profile.accountType === "tenant") {
+    const wasFullySigned = !!draft.tenantSignature && !!draft.landlordSignature;
+    const isNowFullySigned = !!updated.tenantSignature && !!updated.landlordSignature;
+
+    await logActivity({
+      listingId,
+      tenantProfileId: draft.profileId,
+      type:
+        parsed.data.role === "tenant"
+          ? "agreement_signed_by_tenant"
+          : "agreement_signed_by_landlord",
+      actor: parsed.data.role,
+      summary: `${parsed.data.role === "tenant" ? "Tenant" : "Landlord"} signed the rental agreement (Ref ${draft.reference}).`,
+    });
+
+    if (isNowFullySigned && !wasFullySigned) {
+      await logActivity({
+        listingId,
+        tenantProfileId: draft.profileId,
+        type: "agreement_fully_executed",
+        actor: "system",
+        summary: `Rental agreement fully executed — both parties have signed (Ref ${draft.reference}).`,
+      });
+    }
+  }
 
   return NextResponse.json({
     tenantSigned: !!updated.tenantSignature,
