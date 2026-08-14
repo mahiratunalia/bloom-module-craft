@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
-  status: z.enum(["shortlisted", "accepted", "declined"]),
+  status: z.enum(["shortlisted", "accepted", "declined", "completed"]),
 });
 
 export async function GET(

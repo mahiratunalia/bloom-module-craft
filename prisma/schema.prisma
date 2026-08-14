@@ -24,6 +24,7 @@ enum ApplicationStatus {
   shortlisted
   accepted
   declined
+  completed
 }
 
 enum VerificationStatus {
@@ -64,6 +65,7 @@ model Profile {
   landlordVerification LandlordVerification?
   tenantVerification   TenantVerification?
   adminInvitesCreated  AdminInvite[]
+  reviewsWritten       Review[]
 }
 
 model Listing {
@@ -110,8 +112,22 @@ model Application {
   updatedAt DateTime          @updatedAt
   profile   Profile           @relation(fields: [profileId], references: [id], onDelete: Cascade)
   listing   Listing           @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reviews   Review[]
 
   @@unique([profileId, listingId])
+}
+
+model Review {
+  id             String      @id @default(cuid())
+  applicationId  String
+  raterProfileId String
+  rating         Int
+  comment        String?
+  createdAt      DateTime    @default(now())
+  application    Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  raterProfile   Profile     @relation(fields: [raterProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, raterProfileId])
 }
 
 model RoommatePreference {
