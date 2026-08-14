@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 
 import { Signal } from "@/components/trust";
+import { ReviewPanel } from "@/components/review-panel";
 import { ActivityTimeline, type ActivityEventItem } from "@/components/activity-timeline";
 import {
   bdt,
@@ -26,7 +27,8 @@ type MyListing = {
   _count: { applications: number };
 };
 
-type ApplicationStatus = "draft" | "submitted" | "shortlisted" | "accepted" | "declined";
+type ApplicationStatus =
+  "draft" | "submitted" | "shortlisted" | "accepted" | "declined" | "completed";
 
 type RealApplication = {
   id: string;
@@ -120,6 +122,11 @@ export default function LandlordDeskPage() {
   >(null);
   const [verificationNote, setVerificationNote] = useState<string | null>(null);
 
+  const [reviewSummary, setReviewSummary] = useState<{ average: number | null; count: number }>({
+    average: null,
+    count: 0,
+  });
+
   const [openTimelineId, setOpenTimelineId] = useState<string | null>(null);
   const [activityCache, setActivityCache] = useState<Record<string, ActivityEventItem[]>>({});
 
@@ -173,6 +180,12 @@ export default function LandlordDeskPage() {
             setVerificationStatus(d.status);
             setVerificationNote(d.reviewNote);
           }
+        })
+        .catch(() => {});
+      fetch("/api/reviews/received")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d) setReviewSummary({ average: d.average, count: d.count });
         })
         .catch(() => {});
     } else if (status !== "loading") {
@@ -236,7 +249,10 @@ export default function LandlordDeskPage() {
     );
   }, [applications]);
 
-  async function setApplicationStatus(applicationId: string, next: "accepted" | "declined") {
+  async function setApplicationStatus(
+    applicationId: string,
+    next: "accepted" | "declined" | "completed",
+  ) {
     setActingOn(applicationId);
     setActionError(null);
     try {
@@ -400,7 +416,7 @@ export default function LandlordDeskPage() {
               {sessionName}
             </h1>
           </div>
-          <div className="grid grid-cols-3 gap-8">
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
             <Signal label="Total listings" value={`${myListings.length}`} />
             <Signal
               label="Active listings"
@@ -409,6 +425,14 @@ export default function LandlordDeskPage() {
             <Signal
               label="Total applicants"
               value={`${myListings.reduce((sum, l) => sum + l._count.applications, 0)}`}
+            />
+            <Signal
+              label="Review rating"
+              value={
+                reviewSummary.average != null
+                  ? `${reviewSummary.average.toFixed(1)} ★ (${reviewSummary.count})`
+                  : "—"
+              }
             />
           </div>
         </div>
@@ -807,7 +831,7 @@ export default function LandlordDeskPage() {
                       <span className="eyebrow">Status</span>
                       <span
                         className={`font-mono text-xs uppercase tracking-wider ${
-                          a.status === "accepted"
+                          a.status === "accepted" || a.status === "completed"
                             ? "text-trust-high"
                             : a.status === "declined"
                               ? "text-destructive"
@@ -867,6 +891,14 @@ export default function LandlordDeskPage() {
                         </Link>
                         <button
                           type="button"
+                          disabled={actingOn === a.id}
+                          onClick={() => setApplicationStatus(a.id, "completed")}
+                          className="mt-2 block w-full text-center text-xs text-muted-foreground underline underline-offset-4 disabled:opacity-60"
+                        >
+                          Mark tenancy as ended
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => toggleTimeline(a.profile.id)}
                           className="text-center text-xs text-muted-foreground underline underline-offset-4"
                         >
@@ -875,6 +907,9 @@ export default function LandlordDeskPage() {
                             : "Activity timeline ▾"}
                         </button>
                       </div>
+                    )}
+                    {a.status === "completed" && (
+                      <ReviewPanel applicationId={a.id} viewerIsTenant={false} />
                     )}
                   </div>
                   {a.status === "accepted" && openTimelineId === a.profile.id && (

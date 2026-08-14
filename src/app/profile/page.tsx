@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { SignOutButton } from "./sign-out-button";
 import { DeleteButton } from "./delete-button";
 import { VerifyIdentity } from "./verify-identity";
+import { ReviewPanel } from "@/components/review-panel";
 import { PayRentForm } from "./pay-rent-form";
 import { ActivityTimeline } from "@/components/activity-timeline";
 
@@ -43,26 +44,35 @@ export default async function ProfilePage({
 
   if (!user?.profile) redirect("/auth");
 
-  const [savedListings, applications, roommateSessions, agreementDrafts] = await Promise.all([
-    prisma.savedListing.findMany({
-      where: { profileId: user.profile.id },
-      include: { listing: true },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.application.findMany({
-      where: { profileId: user.profile.id },
-      include: { listing: true },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.roommateSession.findMany({
-      where: { profileId: user.profile.id },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.agreementDraft.findMany({
-      where: { profileId: user.profile.id },
-      orderBy: { createdAt: "desc" },
-    }),
-  ]);
+  const [savedListings, applications, roommateSessions, agreementDrafts, reviewsReceived] =
+    await Promise.all([
+      prisma.savedListing.findMany({
+        where: { profileId: user.profile.id },
+        include: { listing: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.application.findMany({
+        where: { profileId: user.profile.id },
+        include: { listing: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.roommateSession.findMany({
+        where: { profileId: user.profile.id },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.agreementDraft.findMany({
+        where: { profileId: user.profile.id },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.review.findMany({
+        where: {
+          application: { profileId: user.profile.id },
+          raterProfileId: { not: user.profile.id },
+        },
+        include: { application: { include: { listing: { select: { title: true } } } } },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
   const profile = user.profile;
 
@@ -215,6 +225,45 @@ export default async function ProfilePage({
                     </div>
                   </>
                 )}
+                {app.status === "completed" && (
+                  <ReviewPanel applicationId={app.id} viewerIsTenant={true} />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Reviews received */}
+      <section className="mt-12">
+        <h2 className="text-2xl mb-6">Reviews received ({reviewsReceived.length})</h2>
+        {reviewsReceived.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No reviews yet — these come from landlords once a tenancy ends.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {reviewsReceived.map((r) => (
+              <div key={r.id} className="rounded-2xl border border-border bg-[var(--card)] p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm">
+                      {"★".repeat(r.rating)}
+                      {"☆".repeat(5 - r.rating)}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {r.application.listing.title}
+                    </p>
+                    {r.comment && (
+                      <p className="mt-2 text-sm italic text-muted-foreground">
+                        &ldquo;{r.comment}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                  <p className="font-mono text-[11px] text-muted-foreground">
+                    {new Date(r.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
