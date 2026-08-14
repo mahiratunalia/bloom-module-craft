@@ -41,6 +41,20 @@ export function paymentReceiptEmail(to: string, tenantName: string, amount: numb
   });
 }
 
+export function paymentConfirmationEmailForLandlord(
+  to: string,
+  landlordName: string,
+  tenantName: string,
+  amount: number,
+  month: string,
+) {
+  return sendEmail({
+    to,
+    subject: `Rent received — ৳${amount.toLocaleString("en-BD")} from ${tenantName} for ${month}`,
+    html: `<p>Hi ${landlordName},</p><p><strong>${tenantName}</strong> has paid <strong>৳${amount.toLocaleString("en-BD")}</strong> in rent for <strong>${month}</strong>. This payment has been logged on BasaKhuji and added to the tenancy's activity timeline.</p><p>— BasaKhuji</p>`,
+  });
+}
+
 export function disputeNotificationEmail(to: string, name: string, disputeId: string) {
   return sendEmail({
     to,

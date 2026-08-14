@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 
 import { Signal } from "@/components/trust";
+import { ActivityTimeline, type ActivityEventItem } from "@/components/activity-timeline";
 import {
   bdt,
   compatibility,
@@ -118,6 +119,29 @@ export default function LandlordDeskPage() {
     "pending" | "verified" | "rejected" | null
   >(null);
   const [verificationNote, setVerificationNote] = useState<string | null>(null);
+
+  const [openTimelineId, setOpenTimelineId] = useState<string | null>(null);
+  const [activityCache, setActivityCache] = useState<Record<string, ActivityEventItem[]>>({});
+
+  async function toggleTimeline(tenantProfileId: string) {
+    if (openTimelineId === tenantProfileId) {
+      setOpenTimelineId(null);
+      return;
+    }
+    setOpenTimelineId(tenantProfileId);
+    if (activityCache[tenantProfileId]) return;
+    try {
+      const res = await fetch(
+        `/api/activity?listingId=${selected}&tenantProfileId=${tenantProfileId}`,
+      );
+      if (res.ok) {
+        const data: ActivityEventItem[] = await res.json();
+        setActivityCache((prev) => ({ ...prev, [tenantProfileId]: data }));
+      }
+    } catch {
+      // best-effort — the toggle just stays in its loading state
+    }
+  }
 
   async function loadMyListings() {
     setListingsLoading(true);
@@ -841,9 +865,29 @@ export default function LandlordDeskPage() {
                         >
                           Maintenance →
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => toggleTimeline(a.profile.id)}
+                          className="text-center text-xs text-muted-foreground underline underline-offset-4"
+                        >
+                          {openTimelineId === a.profile.id
+                            ? "Hide timeline ▴"
+                            : "Activity timeline ▾"}
+                        </button>
                       </div>
                     )}
                   </div>
+                  {a.status === "accepted" && openTimelineId === a.profile.id && (
+                    <div className="sm:col-span-3">
+                      {activityCache[a.profile.id] ? (
+                        <ActivityTimeline events={activityCache[a.profile.id]!} />
+                      ) : (
+                        <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+                          Loading…
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </li>
               ))}
             </ol>
