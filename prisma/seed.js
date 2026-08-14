@@ -345,6 +345,41 @@ async function main() {
   });
   console.log("✓ Seeded a demo agreement draft (unsigned — sign it live to demo the feature)");
 
+  // A settled rent payment for Tanzila's accepted tenancy on bk-1041, so the
+  // Rent Payment Logger & Activity Timeline (profile page and landlord desk)
+  // shows a real entry immediately. Logging a *new* payment still requires
+  // live SSLCOMMERZ sandbox credentials — this just seeds the history.
+  const demoTransactionId = "DEMO-TXN-BK1041-JUL2026";
+  await prisma.payment.upsert({
+    where: { transactionId: demoTransactionId },
+    update: {},
+    create: {
+      transactionId: demoTransactionId,
+      listingId: "bk-1041",
+      profileId: tanzila,
+      amount: 9500,
+      month: "July 2026",
+      status: "paid",
+      validationId: "demo-validation",
+    },
+  });
+  const hasDemoActivity = await prisma.activityEvent.findFirst({
+    where: { listingId: "bk-1041", tenantProfileId: tanzila, type: "payment_logged" },
+  });
+  if (!hasDemoActivity) {
+    await prisma.activityEvent.create({
+      data: {
+        listingId: "bk-1041",
+        tenantProfileId: tanzila,
+        type: "payment_logged",
+        actor: "tenant",
+        summary: "Rent payment of ৳9,500 logged for July 2026.",
+        metadata: { transactionId: demoTransactionId, amount: 9500, month: "July 2026" },
+      },
+    });
+  }
+  console.log("✓ Seeded a demo rent payment and activity timeline entry for Tanzila's tenancy");
+
   // Seed admin account
   const adminPassword = await bcryptjs.hash("admin123", 10);
   await prisma.user.upsert({

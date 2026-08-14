@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { SignOutButton } from "./sign-out-button";
 import { DeleteButton } from "./delete-button";
 import { VerifyIdentity } from "./verify-identity";
+import { PayRentForm } from "./pay-rent-form";
+import { ActivityTimeline } from "@/components/activity-timeline";
 
 type RoommateSessionProfileData = {
   budget?: number;
@@ -63,6 +65,22 @@ export default async function ProfilePage({
   ]);
 
   const profile = user.profile;
+
+  const acceptedListingIds = applications
+    .filter((a) => a.status === "accepted")
+    .map((a) => a.listingId);
+  const activityEvents = acceptedListingIds.length
+    ? await prisma.activityEvent.findMany({
+        where: { tenantProfileId: profile.id, listingId: { in: acceptedListingIds } },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
+  const activityByListing = new Map<string, typeof activityEvents>();
+  for (const event of activityEvents) {
+    const list = activityByListing.get(event.listingId);
+    if (list) list.push(event);
+    else activityByListing.set(event.listingId, [event]);
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
@@ -178,12 +196,19 @@ export default async function ProfilePage({
                   Applied {new Date(app.createdAt).toLocaleDateString()}
                 </p>
                 {app.status === "accepted" && (
-                  <Link
-                    href={`/agreement?applicationId=${app.id}`}
-                    className="mt-3 inline-block text-sm underline underline-offset-4"
-                  >
-                    View agreement →
-                  </Link>
+                  <>
+                    <Link
+                      href={`/agreement?applicationId=${app.id}`}
+                      className="mt-3 inline-block text-sm underline underline-offset-4"
+                    >
+                      View agreement →
+                    </Link>
+                    <PayRentForm listingId={app.listingId} rent={app.listing.rent} />
+                    <div className="mt-5 border-t border-border pt-5">
+                      <p className="eyebrow mb-4">Activity timeline</p>
+                      <ActivityTimeline events={activityByListing.get(app.listingId) ?? []} />
+                    </div>
+                  </>
                 )}
               </div>
             ))}

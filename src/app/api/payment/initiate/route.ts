@@ -2,7 +2,6 @@ import { NextResponse, NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { paymentReceiptEmail } from "@/lib/gmail.server";
 
 const schema = z.object({
   listingId: z.string(),
@@ -28,6 +27,19 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
 
   const { listingId, amount, month } = parsed.data;
+
+  // Only the accepted tenant on this listing can log rent for it — otherwise
+  // the "tamper-evident" activity trail this feeds could be seeded with
+  // payments from accounts that have no real tenancy on the listing.
+  const tenancy = await prisma.application.findFirst({
+    where: { profileId: user.profile.id, listingId, status: "accepted" },
+  });
+  if (!tenancy) {
+    return NextResponse.json(
+      { error: "You don't have an accepted tenancy on this listing." },
+      { status: 403 },
+    );
+  }
 
   const storeId = process.env.SSLCOMMERZ_STORE_ID;
   const storePassword = process.env.SSLCOMMERZ_STORE_PASSWORD;
