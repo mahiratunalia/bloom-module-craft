@@ -876,12 +876,18 @@ export default function LandlordDeskPage() {
                       </button>
                     </div>
                     {a.status === "accepted" && (
-                      <>
+                      <div className="mt-3 flex flex-col items-center gap-1">
                         <Link
                           href={`/agreement?applicationId=${a.id}`}
-                          className="mt-3 block text-center text-xs underline underline-offset-4"
+                          className="text-center text-xs underline underline-offset-4"
                         >
                           Draft agreement →
+                        </Link>
+                        <Link
+                          href="/maintenance"
+                          className="text-center text-xs underline underline-offset-4"
+                        >
+                          Maintenance →
                         </Link>
                         <button
                           type="button"
@@ -894,13 +900,13 @@ export default function LandlordDeskPage() {
                         <button
                           type="button"
                           onClick={() => toggleTimeline(a.profile.id)}
-                          className="mt-2 block w-full text-center text-xs text-muted-foreground underline underline-offset-4"
+                          className="text-center text-xs text-muted-foreground underline underline-offset-4"
                         >
                           {openTimelineId === a.profile.id
                             ? "Hide timeline ▴"
                             : "Activity timeline ▾"}
                         </button>
-                      </>
+                      </div>
                     )}
                     {a.status === "completed" && (
                       <ReviewPanel applicationId={a.id} viewerIsTenant={false} />

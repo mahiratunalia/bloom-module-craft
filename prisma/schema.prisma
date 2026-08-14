@@ -33,6 +33,13 @@ enum VerificationStatus {
   rejected
 }
 
+enum MaintenanceStatus {
+  pending
+  acknowledged
+  in_progress
+  resolved
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -115,6 +122,7 @@ model Application {
   profile   Profile           @relation(fields: [profileId], references: [id], onDelete: Cascade)
   listing   Listing           @relation(fields: [listingId], references: [id], onDelete: Cascade)
   reviews   Review[]
+  maintenanceRequests MaintenanceRequest[]
 
   @@unique([profileId, listingId])
 }
@@ -130,6 +138,20 @@ model Review {
   raterProfile   Profile     @relation(fields: [raterProfileId], references: [id], onDelete: Cascade)
 
   @@unique([applicationId, raterProfileId])
+}
+
+model MaintenanceRequest {
+  id             String            @id @default(cuid())
+  applicationId  String
+  title          String
+  description    String
+  photoUrl       String?           @db.Text
+  status         MaintenanceStatus @default(pending)
+  createdAt      DateTime          @default(now())
+  acknowledgedAt DateTime?
+  inProgressAt   DateTime?
+  resolvedAt     DateTime?
+  application    Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 }
 
 model RoommatePreference {

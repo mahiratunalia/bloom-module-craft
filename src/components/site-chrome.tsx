@@ -46,6 +46,14 @@ export function SiteHeader() {
               Roommates
             </Link>
           )}
+          {status === "authenticated" && (
+            <Link
+              className="border-b-2 border-transparent px-2 py-1 text-[13px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground sm:px-3"
+              href="/maintenance"
+            >
+              Maintenance
+            </Link>
+          )}
           {isAdmin && (
             <Link
               className="border-b-2 border-transparent px-2 py-1 text-[13px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground sm:px-3"

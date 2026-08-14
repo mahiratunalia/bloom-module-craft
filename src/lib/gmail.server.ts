@@ -70,3 +70,31 @@ export function expiryReminderEmail(to: string, tenantName: string, endDate: str
     html: `<p>Hi ${tenantName},</p><p>This is a reminder that your tenancy agreement expires on <strong>${endDate}</strong>. Please log in to BasaKhuji to renew or arrange a move-out.</p><p>— BasaKhuji</p>`,
   });
 }
+
+export function maintenanceFiledEmail(
+  to: string,
+  landlordName: string,
+  requestTitle: string,
+  listingTitle: string,
+) {
+  return sendEmail({
+    to,
+    subject: `New maintenance request — ${listingTitle}`,
+    html: `<p>Hi ${landlordName},</p><p>A new maintenance request has been filed on <strong>${listingTitle}</strong>: &ldquo;${requestTitle}&rdquo;. Please log in to BasaKhuji to review and respond.</p><p>— BasaKhuji</p>`,
+  });
+}
+
+export function maintenanceStatusEmail(
+  to: string,
+  tenantName: string,
+  requestTitle: string,
+  status: string,
+  listingTitle: string,
+) {
+  const statusLabel = status.replace("_", " ");
+  return sendEmail({
+    to,
+    subject: `Maintenance request update — ${requestTitle}`,
+    html: `<p>Hi ${tenantName},</p><p>Your maintenance request &ldquo;${requestTitle}&rdquo; on <strong>${listingTitle}</strong> is now <strong>${statusLabel}</strong>.</p><p>— BasaKhuji</p>`,
+  });
+}

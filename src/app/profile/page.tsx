@@ -207,12 +207,17 @@ export default async function ProfilePage({
                 </p>
                 {app.status === "accepted" && (
                   <>
-                    <Link
-                      href={`/agreement?applicationId=${app.id}`}
-                      className="mt-3 inline-block text-sm underline underline-offset-4"
-                    >
-                      View agreement →
-                    </Link>
+                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
+                      <Link
+                        href={`/agreement?applicationId=${app.id}`}
+                        className="text-sm underline underline-offset-4"
+                      >
+                        View agreement →
+                      </Link>
+                      <Link href="/maintenance" className="text-sm underline underline-offset-4">
+                        Maintenance →
+                      </Link>
+                    </div>
                     <PayRentForm listingId={app.listingId} rent={app.listing.rent} />
                     <div className="mt-5 border-t border-border pt-5">
                       <p className="eyebrow mb-4">Activity timeline</p>
