@@ -828,12 +828,20 @@ export default function LandlordDeskPage() {
                       </button>
                     </div>
                     {a.status === "accepted" && (
-                      <Link
-                        href={`/agreement?applicationId=${a.id}`}
-                        className="mt-3 block text-center text-xs underline underline-offset-4"
-                      >
-                        Draft agreement →
-                      </Link>
+                      <div className="mt-3 flex flex-col items-center gap-1">
+                        <Link
+                          href={`/agreement?applicationId=${a.id}`}
+                          className="text-center text-xs underline underline-offset-4"
+                        >
+                          Draft agreement →
+                        </Link>
+                        <Link
+                          href="/maintenance"
+                          className="text-center text-xs underline underline-offset-4"
+                        >
+                          Maintenance →
+                        </Link>
+                      </div>
                     )}
                   </div>
                 </li>

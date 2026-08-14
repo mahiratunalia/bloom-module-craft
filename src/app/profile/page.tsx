@@ -178,12 +178,17 @@ export default async function ProfilePage({
                   Applied {new Date(app.createdAt).toLocaleDateString()}
                 </p>
                 {app.status === "accepted" && (
-                  <Link
-                    href={`/agreement?applicationId=${app.id}`}
-                    className="mt-3 inline-block text-sm underline underline-offset-4"
-                  >
-                    View agreement →
-                  </Link>
+                  <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
+                    <Link
+                      href={`/agreement?applicationId=${app.id}`}
+                      className="text-sm underline underline-offset-4"
+                    >
+                      View agreement →
+                    </Link>
+                    <Link href="/maintenance" className="text-sm underline underline-offset-4">
+                      Maintenance →
+                    </Link>
+                  </div>
                 )}
               </div>
             ))}
