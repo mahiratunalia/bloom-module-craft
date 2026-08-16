@@ -10,6 +10,7 @@ import { VerifyIdentity } from "./verify-identity";
 import { ReviewPanel } from "@/components/review-panel";
 import { PayRentForm } from "./pay-rent-form";
 import { ActivityTimeline } from "@/components/activity-timeline";
+import { TenantAnalyticsSection } from "@/components/analytics-dashboard";
 
 type RoommateSessionProfileData = {
   budget?: number;
@@ -145,6 +146,14 @@ export default async function ProfilePage({
             initialStatus={profile.tenantVerification?.status ?? null}
             initialNote={profile.tenantVerification?.reviewNote ?? null}
           />
+        </section>
+      )}
+
+      {/* Analytics (tenants only) */}
+      {profile.accountType === "tenant" && (
+        <section className="mt-12">
+          <h2 className="text-2xl">Your insights</h2>
+          <TenantAnalyticsSection />
         </section>
       )}
 
