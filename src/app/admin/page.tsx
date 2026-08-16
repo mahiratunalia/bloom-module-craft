@@ -51,7 +51,10 @@ export default function AdminPage() {
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [tenantVerifications, setTenantVerifications] = useState<TenantVerification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actingOn, setActingOn] = useState<string | null>(null);
+  // A Set, not a single id — otherwise starting an action on row B while row
+  // A's request is still in flight overwrites the "acting on" id and
+  // re-enables A's buttons mid-request, letting it be double-submitted.
+  const [actingOn, setActingOn] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
 
@@ -104,7 +107,7 @@ export default function AdminPage() {
   }, [status]);
 
   async function review(id: string, next: "verified" | "rejected") {
-    setActingOn(id);
+    setActingOn((prev) => new Set(prev).add(id));
     setError(null);
     try {
       const res = await fetch(`/api/admin/verifications/${id}`, {
@@ -118,12 +121,16 @@ export default function AdminPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update this verification.");
     } finally {
-      setActingOn(null);
+      setActingOn((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   }
 
   async function reviewTenant(id: string, next: "verified" | "rejected") {
-    setActingOn(id);
+    setActingOn((prev) => new Set(prev).add(id));
     setError(null);
     try {
       const res = await fetch(`/api/admin/tenant-verifications/${id}`, {
@@ -137,7 +144,11 @@ export default function AdminPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update this verification.");
     } finally {
-      setActingOn(null);
+      setActingOn((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   }
 
@@ -355,19 +366,19 @@ export default function AdminPage() {
                 <div className="mt-4 flex gap-2">
                   <button
                     type="button"
-                    disabled={actingOn === v.id}
+                    disabled={actingOn.has(v.id)}
                     onClick={() => review(v.id, "verified")}
                     className="flex-1 rounded-full bg-accent px-3 py-2 text-xs text-accent-foreground hover:opacity-90 disabled:opacity-60"
                   >
-                    {actingOn === v.id ? "…" : "✓ Approve & verify"}
+                    {actingOn.has(v.id) ? "…" : "✓ Approve & verify"}
                   </button>
                   <button
                     type="button"
-                    disabled={actingOn === v.id}
+                    disabled={actingOn.has(v.id)}
                     onClick={() => review(v.id, "rejected")}
                     className="flex-1 rounded-full border border-destructive/50 px-3 py-2 text-xs text-destructive hover:bg-destructive/5 disabled:opacity-60"
                   >
-                    {actingOn === v.id ? "…" : "✗ Reject"}
+                    {actingOn.has(v.id) ? "…" : "✗ Reject"}
                   </button>
                 </div>
               </li>
@@ -483,19 +494,19 @@ export default function AdminPage() {
                 <div className="mt-4 flex gap-2">
                   <button
                     type="button"
-                    disabled={actingOn === v.id}
+                    disabled={actingOn.has(v.id)}
                     onClick={() => reviewTenant(v.id, "verified")}
                     className="flex-1 rounded-full bg-accent px-3 py-2 text-xs text-accent-foreground hover:opacity-90 disabled:opacity-60"
                   >
-                    {actingOn === v.id ? "…" : "✓ Approve & verify"}
+                    {actingOn.has(v.id) ? "…" : "✓ Approve & verify"}
                   </button>
                   <button
                     type="button"
-                    disabled={actingOn === v.id}
+                    disabled={actingOn.has(v.id)}
                     onClick={() => reviewTenant(v.id, "rejected")}
                     className="flex-1 rounded-full border border-destructive/50 px-3 py-2 text-xs text-destructive hover:bg-destructive/5 disabled:opacity-60"
                   >
-                    {actingOn === v.id ? "…" : "✗ Reject"}
+                    {actingOn.has(v.id) ? "…" : "✗ Reject"}
                   </button>
                 </div>
               </li>

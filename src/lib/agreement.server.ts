@@ -1,36 +1,32 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
 
-export type AgreementTerms = {
-  reference: string;
-  landlordName: string;
-  landlordVerifiedSince: string;
-  tenantName: string;
-  tenantNid: string;
-  tenantPhone: string;
-  propertyTitle: string;
-  roomType: string;
-  area: string;
-  city: string;
-  coords: string;
-  rent: number;
-  deposit: number;
-  durationMonths: number;
-  startDate: string;
-  endDate: string;
-  houseRules: string[];
-};
+export const agreementTermsSchema = z.object({
+  reference: z.string().min(1),
+  landlordName: z.string(),
+  landlordVerifiedSince: z.string(),
+  tenantName: z.string(),
+  tenantNid: z.string(),
+  tenantPhone: z.string(),
+  propertyTitle: z.string(),
+  roomType: z.string(),
+  area: z.string(),
+  city: z.string(),
+  coords: z.string(),
+  rent: z.number(),
+  deposit: z.number(),
+  durationMonths: z.number(),
+  startDate: z.string(),
+  endDate: z.string(),
+  houseRules: z.array(z.string()),
+});
+
+export type AgreementTerms = z.infer<typeof agreementTermsSchema>;
 
 export type AgreementClause = { title: string; body: string };
 
-const clauseSchema = z.object({
-  clauses: z.array(
-    z.object({
-      title: z.string(),
-      body: z.string(),
-    }),
-  ),
-});
+const clauseItemSchema = z.object({ title: z.string(), body: z.string() });
+const clauseListShapeSchema = z.object({ clauses: z.array(z.unknown()) });
 
 function fallbackClauses(t: AgreementTerms): AgreementClause[] {
   const clauses: AgreementClause[] = [
@@ -103,8 +99,13 @@ export async function draftAgreementClauses(
       .replace(/^```\s*/i, "")
       .replace(/\s*```$/i, "")
       .trim();
-    const parsed = clauseSchema.safeParse(JSON.parse(text));
-    const clauses = (parsed.success ? parsed.data.clauses : [])
+    const shapeParsed = clauseListShapeSchema.safeParse(JSON.parse(text));
+    // Validate each clause independently rather than the whole array at once —
+    // one malformed clause from Gemini shouldn't discard every other good one.
+    const clauses = (shapeParsed.success ? shapeParsed.data.clauses : [])
+      .map((c) => clauseItemSchema.safeParse(c))
+      .filter((r): r is { success: true; data: AgreementClause } => r.success)
+      .map((r) => r.data)
       .filter((c) => c.title && c.body)
       .slice(0, 12);
     if (clauses.length === 0) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -35,7 +36,10 @@ type Props = {
 // Forces the map to invalidate its size after mount — fixes blank/grey tile issues
 function MapResizer() {
   const map = useMap();
-  setTimeout(() => map.invalidateSize(), 100);
+  useEffect(() => {
+    const id = setTimeout(() => map.invalidateSize(), 100);
+    return () => clearTimeout(id);
+  }, [map]);
   return null;
 }
 

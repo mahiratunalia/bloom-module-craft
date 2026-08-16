@@ -39,6 +39,41 @@ export async function POST(request: NextRequest) {
   });
   if (!draft) return NextResponse.json({ error: "Draft not found" }, { status: 404 });
 
+  // reference is always `${listingId}/${duration}M` (see agreement/page.tsx) — reused
+  // below both to authorize the signer and to scope the activity-log entry.
+  const userId = String(token.sub);
+  const listingId = draft.reference.split("/")[0];
+
+  if (parsed.data.role === "tenant") {
+    if (draft.profile.userId !== userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  } else {
+    const listing = listingId
+      ? await prisma.listing.findUnique({ where: { id: listingId }, select: { landlordId: true } })
+      : null;
+    if (!listing || listing.landlordId !== userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
+  // Idempotent: re-submitting the same role's signature doesn't overwrite the
+  // original or double-log the activity timeline.
+  if (parsed.data.role === "tenant" && draft.tenantSignature) {
+    return NextResponse.json({
+      tenantSigned: true,
+      landlordSigned: !!draft.landlordSignature,
+      signedAt: (draft.tenantSignedAt ?? new Date()).toISOString(),
+    });
+  }
+  if (parsed.data.role === "landlord" && draft.landlordSignature) {
+    return NextResponse.json({
+      tenantSigned: !!draft.tenantSignature,
+      landlordSigned: true,
+      signedAt: (draft.landlordSignedAt ?? new Date()).toISOString(),
+    });
+  }
+
   const now = new Date();
   const data =
     parsed.data.role === "tenant"
@@ -51,7 +86,6 @@ export async function POST(request: NextRequest) {
   // flow — it's what disambiguates which tenant's agreement this is. Only log
   // against the tenant-scoped timeline when that holds; skip otherwise rather
   // than mis-attributing an event to the wrong party.
-  const listingId = draft.reference.split("/")[0];
   if (listingId && draft.profile.accountType === "tenant") {
     const wasFullySigned = !!draft.tenantSignature && !!draft.landlordSignature;
     const isNowFullySigned = !!updated.tenantSignature && !!updated.landlordSignature;

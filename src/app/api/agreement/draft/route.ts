@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 import { authOptions } from "@/auth";
-import { draftAgreementClauses, type AgreementTerms } from "@/lib/agreement.server";
+import { draftAgreementClauses, agreementTermsSchema } from "@/lib/agreement.server";
 
 export async function POST(request: NextRequest) {
   const token = await getToken({ req: request, secret: authOptions.secret });
@@ -10,7 +10,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const terms = (await request.json()) as AgreementTerms;
-  const result = await draftAgreementClauses(terms);
+  const body = await request.json().catch(() => null);
+  const parsed = agreementTermsSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid agreement terms." }, { status: 400 });
+  }
+
+  const result = await draftAgreementClauses(parsed.data);
   return NextResponse.json(result);
 }

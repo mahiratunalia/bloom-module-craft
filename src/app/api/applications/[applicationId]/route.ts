@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { getLandlordSummary } from "@/lib/landlord-summary.server";
 
 const schema = z.object({
   status: z.enum(["shortlisted", "accepted", "declined", "completed"]),
@@ -41,12 +42,17 @@ export async function GET(
     );
   }
 
-  const landlord = await prisma.user.findUnique({ where: { id: application.listing.landlordId } });
+  const [landlord, landlordSummary] = await Promise.all([
+    prisma.user.findUnique({ where: { id: application.listing.landlordId } }),
+    getLandlordSummary(application.listing.landlordId),
+  ]);
 
   return NextResponse.json({
     id: application.id,
     tenantName: application.profile.displayName,
     landlordName: landlord?.name ?? "Landlord",
+    landlordVerified: landlordSummary.verified,
+    landlordVerifiedSince: landlordSummary.verifiedSince,
     listing: {
       id: application.listing.id,
       title: application.listing.title,
@@ -59,6 +65,7 @@ export async function GET(
       deposit: application.listing.deposit,
       availableFrom: application.listing.availableFrom.toISOString(),
       landlordId: application.listing.landlordId,
+      houseRules: application.listing.houseRules,
     },
   });
 }
