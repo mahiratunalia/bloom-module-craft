@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { Signal } from "@/components/trust";
 import { ReviewPanel } from "@/components/review-panel";
 import { ActivityTimeline, type ActivityEventItem } from "@/components/activity-timeline";
+import { LandlordAnalyticsSection } from "@/components/analytics-dashboard";
 import {
   bdt,
   compatibility,
@@ -464,6 +465,11 @@ export default function LandlordDeskPage() {
       </header>
 
       <section className="mt-12">
+        <h2 className="text-2xl">Analytics</h2>
+        <LandlordAnalyticsSection />
+      </section>
+
+      <section className="mt-16">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h2 className="text-2xl">Listings</h2>
           <button
