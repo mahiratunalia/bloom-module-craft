@@ -34,6 +34,21 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
     const clauses = draft.clausesJson as { title: string; body: string }[];
     const terms = draft.termsJson as unknown as AgreementTerms;
 
+    // Defends against pre-existing rows saved before termsJson had shape
+    // validation at write time — malformed data here shouldn't crash a
+    // public, unauthenticated page.
+    if (typeof terms?.rent !== "number" || typeof terms?.deposit !== "number") {
+      return (
+        <div className="mx-auto max-w-2xl px-5 py-24 text-center">
+          <p className="eyebrow">Share link</p>
+          <h1 className="mt-4 text-3xl">This agreement can&apos;t be displayed</h1>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Its saved data is incomplete. Ask the sender to regenerate and re-share it.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="mx-auto max-w-3xl px-5 py-12">
         <p className="eyebrow">Shared agreement · read-only</p>

@@ -14,15 +14,24 @@ export type EmailPayload = {
   html: string;
 };
 
+/**
+ * Best-effort — a Gmail/network failure must never break the caller's own
+ * action (e.g. a payment that already succeeded and was recorded). Mirrors
+ * the same "never throw" contract activity.server.ts's logActivity uses.
+ */
 export async function sendEmail(payload: EmailPayload) {
   if (!process.env.GMAIL_EMAIL || !process.env.GMAIL_APP_PASSWORD) {
     console.warn("Gmail not configured — skipping email:", payload.subject);
     return;
   }
-  await transporter.sendMail({
-    from: `"BasaKhuji" <${process.env.GMAIL_EMAIL}>`,
-    ...payload,
-  });
+  try {
+    await transporter.sendMail({
+      from: `"BasaKhuji" <${process.env.GMAIL_EMAIL}>`,
+      ...payload,
+    });
+  } catch (error) {
+    console.error("sendEmail failed:", payload.subject, error);
+  }
 }
 
 export function agreementDeliveryEmail(to: string, tenantName: string, reference: string) {

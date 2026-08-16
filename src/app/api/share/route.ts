@@ -30,6 +30,21 @@ export async function POST(request: NextRequest) {
   });
   if (!user?.profile) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
 
+  // Only the owner of the underlying resource may mint a share link for it —
+  // otherwise any signed-in user could share (and email out) someone else's
+  // private agreement or roommate session just by guessing/knowing its id.
+  const owns =
+    parsed.data.type === "agreement"
+      ? await prisma.agreementDraft.findFirst({
+          where: { id: parsed.data.resourceId, profileId: user.profile.id },
+          select: { id: true },
+        })
+      : await prisma.roommateSession.findFirst({
+          where: { id: parsed.data.resourceId, profileId: user.profile.id },
+          select: { id: true },
+        });
+  if (!owns) return NextResponse.json({ error: "Resource not found" }, { status: 404 });
+
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
   const link = await prisma.shareLink.create({
     data: {

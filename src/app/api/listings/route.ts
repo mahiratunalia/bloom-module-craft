@@ -101,20 +101,37 @@ export async function GET(request: NextRequest) {
   const maxRent = searchParams.get("maxRent");
   const availableBy = searchParams.get("availableBy");
 
+  const minRentNum = minRent !== null ? Number(minRent) : undefined;
+  const maxRentNum = maxRent !== null ? Number(maxRent) : undefined;
+  if (
+    (minRentNum !== undefined && !Number.isFinite(minRentNum)) ||
+    (maxRentNum !== undefined && !Number.isFinite(maxRentNum))
+  ) {
+    return NextResponse.json({ error: "Invalid rent filter." }, { status: 400 });
+  }
+
+  let availableByDate: Date | undefined;
+  if (availableBy) {
+    availableByDate = new Date(availableBy);
+    if (Number.isNaN(availableByDate.getTime())) {
+      return NextResponse.json({ error: "Invalid availability date." }, { status: 400 });
+    }
+  }
+
   const listings = await prisma.listing.findMany({
     where: {
       status: "Active",
       ...(area ? { area } : {}),
       ...(roomType ? { roomType } : {}),
-      ...(minRent || maxRent
+      ...(minRentNum !== undefined || maxRentNum !== undefined
         ? {
             rent: {
-              ...(minRent ? { gte: Number(minRent) } : {}),
-              ...(maxRent ? { lte: Number(maxRent) } : {}),
+              ...(minRentNum !== undefined ? { gte: minRentNum } : {}),
+              ...(maxRentNum !== undefined ? { lte: maxRentNum } : {}),
             },
           }
         : {}),
-      ...(availableBy ? { availableFrom: { lte: new Date(availableBy) } } : {}),
+      ...(availableByDate ? { availableFrom: { lte: availableByDate } } : {}),
     },
     orderBy: { postedOn: "desc" },
     include: {

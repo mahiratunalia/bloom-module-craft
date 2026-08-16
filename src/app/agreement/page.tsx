@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { bdt, formatDate, getLandlord, listings } from "@/data/module1";
 import { downloadAgreementPdf } from "@/lib/agreement-pdf";
@@ -93,6 +93,7 @@ function AgreementPage() {
   const [realListing, setRealListing] = useState<AgreementListing | null>(null);
   const [realTenant, setRealTenant] = useState<AgreementTenant | null>(null);
   const [realLandlordName, setRealLandlordName] = useState<string | null>(null);
+  const [realLandlordVerifiedSince, setRealLandlordVerifiedSince] = useState<string | null>(null);
 
   useEffect(() => {
     if (!applicationId) return;
@@ -123,7 +124,7 @@ function AgreementPage() {
           availableFrom: data.listing.availableFrom,
           landlordId: data.listing.landlordId,
           coords: `${data.listing.latitude.toFixed(4)}, ${data.listing.longitude.toFixed(4)}`,
-          houseRules: [],
+          houseRules: data.listing.houseRules ?? [],
         });
         setRealTenant({
           name: data.tenantName,
@@ -131,6 +132,7 @@ function AgreementPage() {
           phone: "Not yet on file",
         });
         setRealLandlordName(data.landlordName);
+        setRealLandlordVerifiedSince(data.landlordVerifiedSince ?? null);
       })
       .catch((err) => {
         if (!cancelled)
@@ -147,8 +149,20 @@ function AgreementPage() {
   const listing = realListing ?? DEMO_LISTING;
   const tenant = realTenant ?? DEMO_TENANT;
   const mockOwner = getLandlord(listing.landlordId);
+  // For a real application, listing.landlordId is a real DB id that's never in
+  // the mock landlordsById map, so getLandlord() always falls back to its
+  // "unknown landlord" placeholder (verifiedSince "—") — only overriding
+  // `name` used to leave that bogus placeholder in place even for landlords
+  // who are genuinely admin-verified, both on screen and in the terms sent to
+  // Gemini for drafting.
   const owner =
-    applicationId && realLandlordName ? { ...mockOwner, name: realLandlordName } : mockOwner;
+    applicationId && realLandlordName
+      ? {
+          ...mockOwner,
+          name: realLandlordName,
+          verifiedSince: realLandlordVerifiedSince ?? "Not yet verified",
+        }
+      : mockOwner;
 
   const [duration, setDuration] = useState(12);
   const [clauses, setClauses] = useState<AgreementClause[] | null>(null);
@@ -176,6 +190,15 @@ function AgreementPage() {
     [duration, startDate],
   );
   const reference = `${listing.id}/${duration}M`;
+
+  // Lets generate() detect, when its fetches resolve, whether the user has
+  // since changed the duration (which changes `reference` and terms) — a
+  // slower in-flight response for the old duration must not overwrite
+  // whatever the user is now looking at.
+  const latestReferenceRef = useRef(reference);
+  useEffect(() => {
+    latestReferenceRef.current = reference;
+  }, [reference]);
 
   useEffect(() => {
     if (bothSigned && reference) {
@@ -208,8 +231,18 @@ function AgreementPage() {
   };
 
   async function generate() {
+    const requestedReference = reference;
     setBusy(true);
     setNotice(null);
+    // Regenerating (same or different duration) must invalidate any existing
+    // signatures — they were made against clause text that's about to change,
+    // and re-signing them silently against new wording would be signing
+    // something nobody actually re-reviewed.
+    setTenantSignature(null);
+    setLandlordSignature(null);
+    setSigningRole(null);
+    setSignError(null);
+    setDraftId(null);
     try {
       const response = await fetch("/api/agreement/draft", {
         method: "POST",
@@ -221,6 +254,7 @@ function AgreementPage() {
         source: "ai" | "fallback";
         error?: string;
       };
+      if (latestReferenceRef.current !== requestedReference) return; // stale — duration changed mid-flight
       setClauses(result.clauses);
       setSource(result.source);
       if (result.error && result.source === "fallback")
@@ -237,17 +271,19 @@ function AgreementPage() {
           source: result.source,
         }),
       });
+      if (latestReferenceRef.current !== requestedReference) return;
       if (saveRes.ok) {
         const saved = await saveRes.json();
         setDraftId(saved.id);
       }
     } catch (error) {
+      if (latestReferenceRef.current !== requestedReference) return;
       // quota/access errors — silently fall back, clauses already set by API route
       const msg = error instanceof Error ? error.message : "";
       if (!msg.includes("429") && !msg.includes("403"))
         setNotice(msg || "Could not draft the agreement.");
     } finally {
-      setBusy(false);
+      if (latestReferenceRef.current === requestedReference) setBusy(false);
     }
   }
 

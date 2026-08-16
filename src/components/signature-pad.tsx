@@ -43,8 +43,15 @@ export function SignaturePad({
   }
 
   function pointerPos(e: ReactPointerEvent<HTMLCanvasElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const canvas = e.currentTarget;
+    const rect = canvas.getBoundingClientRect();
+    // The canvas has a fixed intrinsic drawing surface (PAD_W×PAD_H) but is
+    // styled to render at whatever width the layout gives it (w-full), so on
+    // any screen where those differ, raw client coordinates land off-cursor —
+    // scale into the canvas's own coordinate space.
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
   }
 
   function handlePointerDown(e: ReactPointerEvent<HTMLCanvasElement>) {
@@ -108,19 +115,30 @@ export function SignaturePad({
 
   const canConfirm = mode === "draw" ? hasDrawn : typedName.trim().length > 0;
 
+  // Draw/Type render different DOM in the same slot below, so switching modes
+  // unmounts the canvas — reset its "has content" state whenever that happens,
+  // otherwise a stale hasDrawn/hasStroke lets a blank re-mounted canvas pass
+  // validation and get submitted as a signature.
+  function switchMode(next: "draw" | "type") {
+    if (next === mode) return;
+    setMode(next);
+    hasStroke.current = false;
+    setHasDrawn(false);
+  }
+
   return (
     <div className="mt-4 space-y-3">
       <div className="flex gap-1 font-mono text-[10px] uppercase tracking-widest">
         <button
           type="button"
-          onClick={() => setMode("draw")}
+          onClick={() => switchMode("draw")}
           className={`px-2.5 py-1 ${mode === "draw" ? "bg-foreground text-paper" : "border border-border text-muted-foreground"}`}
         >
           Draw
         </button>
         <button
           type="button"
-          onClick={() => setMode("type")}
+          onClick={() => switchMode("type")}
           className={`px-2.5 py-1 ${mode === "type" ? "bg-foreground text-paper" : "border border-border text-muted-foreground"}`}
         >
           Type

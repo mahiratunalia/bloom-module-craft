@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({ listingId: z.string() });
@@ -27,13 +28,24 @@ export async function POST(request: NextRequest) {
   });
 
   if (existing) {
-    await prisma.savedListing.delete({ where: { id: existing.id } });
+    // deleteMany instead of delete-by-id: if a concurrent request already
+    // removed this row, this just matches zero rows instead of throwing P2025.
+    await prisma.savedListing.deleteMany({ where: { id: existing.id } });
     return NextResponse.json({ saved: false });
   }
 
-  await prisma.savedListing.create({
-    data: { profileId: user.profile.id, listingId: parsed.data.listingId },
-  });
+  try {
+    await prisma.savedListing.create({
+      data: { profileId: user.profile.id, listingId: parsed.data.listingId },
+    });
+  } catch (err) {
+    // A concurrent request already created the same (profileId, listingId)
+    // row between our findFirst and this create — that's fine, end state is
+    // the same either way.
+    if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")) {
+      throw err;
+    }
+  }
   return NextResponse.json({ saved: true });
 }
 
