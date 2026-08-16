@@ -158,7 +158,7 @@ export function downloadSimplePdf(filename: string, title: string, rows: Record<
   doc.text(`BasaKhuji · exported ${new Date().toLocaleDateString()}`, MARGIN, y);
   y += 22;
   doc.setDrawColor(160);
-  doc.line(MARGIN, 539.28 - MARGIN, 539.28 - MARGIN, y);
+  doc.line(MARGIN, y, 539.28 - MARGIN, y);
   y += 10;
 
   for (const row of rows) {

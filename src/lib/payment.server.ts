@@ -68,6 +68,20 @@ export async function finalizePayment(transactionId: string, valId: string | nul
     data: { status: "paid", validationId: valId },
   });
 
+  // Logged before the (best-effort) emails below: this is the tamper-evident
+  // audit trail the platform is actually built around, and finalizePayment()
+  // short-circuits to "alreadyProcessed" on any retry once status is "paid" —
+  // so if this ran after the emails and an email step failed, the log entry
+  // would be permanently skipped with no way to retry it.
+  await logActivity({
+    listingId: payment.listingId,
+    tenantProfileId: payment.profileId,
+    type: "payment_logged",
+    actor: "tenant",
+    summary: `Rent payment of ৳${payment.amount.toLocaleString("en-BD")} logged for ${payment.month}.`,
+    metadata: { transactionId, amount: payment.amount, month: payment.month },
+  });
+
   const [tenantProfile, landlordUser] = await Promise.all([
     prisma.profile.findUnique({ where: { id: payment.profileId }, include: { user: true } }),
     prisma.user.findUnique({
@@ -93,15 +107,6 @@ export async function finalizePayment(transactionId: string, valId: string | nul
       payment.month,
     );
   }
-
-  await logActivity({
-    listingId: payment.listingId,
-    tenantProfileId: payment.profileId,
-    type: "payment_logged",
-    actor: "tenant",
-    summary: `Rent payment of ৳${payment.amount.toLocaleString("en-BD")} logged for ${payment.month}.`,
-    metadata: { transactionId, amount: payment.amount, month: payment.month },
-  });
 
   return { ok: true as const, alreadyProcessed: false };
 }

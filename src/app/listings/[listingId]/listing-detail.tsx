@@ -66,6 +66,18 @@ export function ListingDetail({
       .catch(() => {});
   }, [listing.id]);
 
+  // check if already applied — otherwise this always starts false, so
+  // reloading the page after applying shows "Apply" again and clicking it
+  // just surfaces the API's "already applied" error instead of the true state.
+  useEffect(() => {
+    fetch("/api/applications/mine")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((apps: { listing: { id: string } }[]) => {
+        if (apps.some((a) => a.listing.id === listing.id)) setApplied(true);
+      })
+      .catch(() => {});
+  }, [listing.id]);
+
   async function apply() {
     setApplying(true);
     setApplyMsg(null);

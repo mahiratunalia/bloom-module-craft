@@ -28,23 +28,19 @@ export async function DELETE(request: NextRequest) {
   const profileId = user.profile.id;
   const { type, id } = parsed.data;
 
-  if (type === "savedListing") {
-    const item = await prisma.savedListing.findFirst({ where: { id, profileId } });
-    if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    await prisma.savedListing.delete({ where: { id } });
-  } else if (type === "application") {
-    const item = await prisma.application.findFirst({ where: { id, profileId } });
-    if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    await prisma.application.delete({ where: { id } });
-  } else if (type === "roommateSession") {
-    const item = await prisma.roommateSession.findFirst({ where: { id, profileId } });
-    if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    await prisma.roommateSession.delete({ where: { id } });
-  } else if (type === "agreementDraft") {
-    const item = await prisma.agreementDraft.findFirst({ where: { id, profileId } });
-    if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    await prisma.agreementDraft.delete({ where: { id } });
-  }
+  // deleteMany scoped by (id, profileId) is atomic — it can't race against a
+  // concurrent delete of the same row the way a separate findFirst-then-delete
+  // can (which throws P2025 if the row disappears in between).
+  const result =
+    type === "savedListing"
+      ? await prisma.savedListing.deleteMany({ where: { id, profileId } })
+      : type === "application"
+        ? await prisma.application.deleteMany({ where: { id, profileId } })
+        : type === "roommateSession"
+          ? await prisma.roommateSession.deleteMany({ where: { id, profileId } })
+          : await prisma.agreementDraft.deleteMany({ where: { id, profileId } });
+
+  if (result.count === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   return NextResponse.json({ ok: true });
 }

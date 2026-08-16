@@ -31,10 +31,17 @@ export async function POST(request: Request) {
 
   if (!transactionId) return NextResponse.json({ error: "Missing tran_id" }, { status: 400 });
 
-  if (status === "VALID" || status === "VALIDATED") {
-    await finalizePayment(transactionId, validationId);
-  } else {
-    await markFailed(transactionId, status || "cancelled");
+  try {
+    if (status === "VALID" || status === "VALIDATED") {
+      await finalizePayment(transactionId, validationId);
+    } else {
+      await markFailed(transactionId, status || "cancelled");
+    }
+  } catch (error) {
+    console.error("payment IPN handling failed:", error);
+    // Still ack with 200 — SSLCOMMERZ retries on non-2xx, and the browser
+    // redirect path (GET, below) provides a second, independent chance to
+    // finalize the same transactionId idempotently.
   }
 
   return NextResponse.json({ received: true });

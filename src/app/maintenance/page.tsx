@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 
 type Status = "pending" | "acknowledged" | "in_progress" | "resolved";
@@ -81,7 +81,10 @@ export default function MaintenancePage() {
 function LandlordView() {
   const [requests, setRequests] = useState<LandlordRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actingOn, setActingOn] = useState<string | null>(null);
+  // A Set, not a single id — advancing request B while request A is still in
+  // flight would otherwise overwrite the "acting on" id and re-enable A's
+  // button mid-request.
+  const [actingOn, setActingOn] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
@@ -106,7 +109,7 @@ function LandlordView() {
   };
 
   async function advance(id: string, next: Status) {
-    setActingOn(id);
+    setActingOn((prev) => new Set(prev).add(id));
     setError(null);
     try {
       const res = await fetch(`/api/maintenance/${id}`, {
@@ -120,7 +123,11 @@ function LandlordView() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update request.");
     } finally {
-      setActingOn(null);
+      setActingOn((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   }
 
@@ -197,11 +204,11 @@ function LandlordView() {
                     {nextStep[r.status] && (
                       <button
                         type="button"
-                        disabled={actingOn === r.id}
+                        disabled={actingOn.has(r.id)}
                         onClick={() => advance(r.id, nextStep[r.status]!.next)}
                         className="mt-3 block rounded-full bg-accent px-4 py-2 text-xs text-accent-foreground hover:opacity-90 disabled:opacity-50"
                       >
-                        {actingOn === r.id ? "…" : nextStep[r.status]!.label}
+                        {actingOn.has(r.id) ? "…" : nextStep[r.status]!.label}
                       </button>
                     )}
                   </div>
@@ -222,6 +229,10 @@ function TenantView() {
 
   const [requests, setRequests] = useState<TenantRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
+  // Guards against a slower response for a previously-selected tenancy
+  // landing after a faster one for the currently-selected tenancy, which
+  // would otherwise silently overwrite the list with the wrong tenancy's data.
+  const requestSeq = useRef(0);
 
   const [form, setForm] = useState({ title: "", description: "", photoUrl: "" });
   const [submitting, setSubmitting] = useState(false);
@@ -245,6 +256,7 @@ function TenantView() {
   }, []);
 
   async function loadRequests(applicationId: string) {
+    const seq = ++requestSeq.current;
     if (!applicationId) {
       setRequests([]);
       return;
@@ -252,13 +264,22 @@ function TenantView() {
     setLoadingRequests(true);
     try {
       const res = await fetch(`/api/maintenance?applicationId=${applicationId}`);
-      setRequests(res.ok ? await res.json() : []);
+      const data = res.ok ? await res.json() : [];
+      // A newer request has since started (tenancy switched again) — discard
+      // this now-stale response instead of overwriting the newer data.
+      if (seq !== requestSeq.current) return;
+      setRequests(data);
     } finally {
-      setLoadingRequests(false);
+      if (seq === requestSeq.current) setLoadingRequests(false);
     }
   }
 
   useEffect(() => {
+    // React's own documented data-fetching pattern (set loading, then fetch, then
+    // clear it) — flagged by the newer stricter set-state-in-effect rule, but not
+    // a bug: needed so switching the selected tenancy shows fresh requests, not
+    // the previous tenancy's stale list.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadRequests(selected);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);

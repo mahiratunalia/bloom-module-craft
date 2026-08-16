@@ -3,10 +3,14 @@ import { getToken } from "next-auth/jwt";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { agreementTermsSchema } from "@/lib/agreement.server";
 
 const schema = z.object({
   reference: z.string(),
-  termsJson: z.record(z.unknown()),
+  // Full shape validation (not z.record(z.unknown())) so a malformed save
+  // can never persist data that later crashes the public /share page, which
+  // reads numeric fields like rent/deposit straight out of this JSON.
+  termsJson: agreementTermsSchema,
   clausesJson: z.array(z.object({ title: z.string(), body: z.string() })),
   source: z.string(),
 });
