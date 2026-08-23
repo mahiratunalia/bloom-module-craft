@@ -193,11 +193,6 @@ export default function RoommatesPage() {
         <h1 className="mt-4 max-w-2xl font-display text-4xl font-bold uppercase leading-[1.05] tracking-tight sm:text-5xl">
           Compatibility is arithmetic, not a guess.
         </h1>
-        <p className="mt-5 max-w-xl text-[15px] text-muted-foreground">
-          Budget overlap 30% · sleep schedule 20% · smoking 20% (hard filter when non-negotiable) ·
-          study habits 15% · visitor tolerance 15%. Cooking habits are collected below but
-          aren&apos;t scored.
-        </p>
       </header>
 
       <div className="mt-10 grid gap-14 lg:grid-cols-[340px_1fr]">
@@ -356,7 +351,7 @@ export default function RoommatesPage() {
                       .join("; ");
                   return row;
                 });
-                downloadCsv(`BasaKhuji-roommates-${label || "session"}.csv`, rows);
+                downloadCsv(`Thikana-roommates-${label || "session"}.csv`, rows);
               }}
               onDownloadPdf={(fields, fmt) => {
                 const enabled = new Set(fields.filter((f) => f.enabled).map((f) => f.key));
@@ -381,7 +376,7 @@ export default function RoommatesPage() {
                   return row;
                 });
                 downloadSimplePdf(
-                  `BasaKhuji-roommates-${label || "session"}.pdf`,
+                  `Thikana-roommates-${label || "session"}.pdf`,
                   label || "Roommate Matching Session",
                   rows,
                 );
@@ -485,7 +480,7 @@ export default function RoommatesPage() {
                       {expandedId === candidate.id ? "Hide profile" : "Profile"}
                     </button>
                     <a
-                      href={`mailto:${candidate.email}?subject=${encodeURIComponent("Roommate match on BasaKhuji")}&body=${encodeURIComponent(`Hi ${candidate.name}, we matched at ${result.total}% compatible on BasaKhuji. Want to both apply to the same shared listing?`)}`}
+                      href={`mailto:${candidate.email}?subject=${encodeURIComponent("Roommate match on ঠিকানা")}&body=${encodeURIComponent(`Hi ${candidate.name}, we matched at ${result.total}% compatible on ঠিকানা. Want to both apply to the same shared listing?`)}`}
                       className="flex-1 rounded-full border border-border px-3 py-2 text-center text-xs hover:bg-secondary"
                     >
                       Message

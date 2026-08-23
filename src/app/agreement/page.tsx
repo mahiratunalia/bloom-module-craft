@@ -309,7 +309,7 @@ function AgreementPage() {
   }
 
   function handleDownloadCsv() {
-    downloadCsv(`BasaKhuji-agreement-${reference.replace(/\//g, "-")}.csv`, [buildRow()]);
+    downloadCsv(`Thikana-agreement-${reference.replace(/\//g, "-")}.csv`, [buildRow()]);
   }
 
   function handleDownloadPdf() {

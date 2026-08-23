@@ -33,7 +33,7 @@ export async function sendEmail(payload: EmailPayload) {
   }
   try {
     await transporter.sendMail({
-      from: `"BasaKhuji" <${process.env.GMAIL_EMAIL}>`,
+      from: `"ঠিকানা" <${process.env.GMAIL_EMAIL}>`,
       ...payload,
     });
   } catch (error) {
@@ -47,7 +47,7 @@ export function agreementDeliveryEmail(to: string, tenantName: string, reference
   return sendEmail({
     to,
     subject: `Your rental agreement is ready — Ref ${reference}`,
-    html: `<p>Hi ${name},</p><p>Your rental agreement (Ref: <strong>${ref}</strong>) has been generated and acknowledged on BasaKhuji. Please log in to download your signed PDF.</p><p>— BasaKhuji</p>`,
+    html: `<p>Hi ${name},</p><p>Your rental agreement (Ref: <strong>${ref}</strong>) has been generated and acknowledged on ঠিকানা. Please log in to download your signed PDF.</p><p>— ঠিকানা</p>`,
   });
 }
 
@@ -57,7 +57,7 @@ export function paymentReceiptEmail(to: string, tenantName: string, amount: numb
   return sendEmail({
     to,
     subject: `Payment receipt — ৳${amount.toLocaleString("en-BD")} for ${month}`,
-    html: `<p>Hi ${name},</p><p>Your rent payment of <strong>৳${amount.toLocaleString("en-BD")}</strong> for <strong>${monthEsc}</strong> has been logged on BasaKhuji.</p><p>— BasaKhuji</p>`,
+    html: `<p>Hi ${name},</p><p>Your rent payment of <strong>৳${amount.toLocaleString("en-BD")}</strong> for <strong>${monthEsc}</strong> has been logged on ঠিকানা.</p><p>— ঠিকানা</p>`,
   });
 }
 
@@ -74,7 +74,7 @@ export function paymentConfirmationEmailForLandlord(
   return sendEmail({
     to,
     subject: `Rent received — ৳${amount.toLocaleString("en-BD")} from ${tenantName} for ${month}`,
-    html: `<p>Hi ${landlord},</p><p><strong>${tenant}</strong> has paid <strong>৳${amount.toLocaleString("en-BD")}</strong> in rent for <strong>${monthEsc}</strong>. This payment has been logged on BasaKhuji and added to the tenancy's activity timeline.</p><p>— BasaKhuji</p>`,
+    html: `<p>Hi ${landlord},</p><p><strong>${tenant}</strong> has paid <strong>৳${amount.toLocaleString("en-BD")}</strong> in rent for <strong>${monthEsc}</strong>. This payment has been logged on ঠিকানা and added to the tenancy's activity timeline.</p><p>— ঠিকানা</p>`,
   });
 }
 
@@ -84,7 +84,7 @@ export function disputeNotificationEmail(to: string, name: string, disputeId: st
   return sendEmail({
     to,
     subject: `Dispute filed — Ref ${disputeId}`,
-    html: `<p>Hi ${nameEsc},</p><p>A dispute (Ref: <strong>${id}</strong>) has been filed on your tenancy. Log in to BasaKhuji to review the evidence and respond.</p><p>— BasaKhuji</p>`,
+    html: `<p>Hi ${nameEsc},</p><p>A dispute (Ref: <strong>${id}</strong>) has been filed on your tenancy. Log in to ঠিকানা to review the evidence and respond.</p><p>— ঠিকানা</p>`,
   });
 }
 
@@ -94,7 +94,7 @@ export function disputeFiledConfirmationEmail(to: string, name: string, disputeI
   return sendEmail({
     to,
     subject: `Your dispute has been filed — Ref ${disputeId}`,
-    html: `<p>Hi ${nameEsc},</p><p>Your dispute (Ref: <strong>${id}</strong>) has been filed on BasaKhuji. We've bundled the agreement, payment history, and maintenance timeline for this tenancy for admin review. You'll be notified by email once it's resolved.</p><p>— BasaKhuji</p>`,
+    html: `<p>Hi ${nameEsc},</p><p>Your dispute (Ref: <strong>${id}</strong>) has been filed on ঠিকানা. We've bundled the agreement, payment history, and maintenance timeline for this tenancy for admin review. You'll be notified by email once it's resolved.</p><p>— ঠিকানা</p>`,
   });
 }
 
@@ -110,7 +110,7 @@ export function disputeResolvedEmail(
   return sendEmail({
     to,
     subject: `Dispute resolved — Ref ${disputeId}`,
-    html: `<p>Hi ${nameEsc},</p><p>An admin has issued a resolution for dispute Ref <strong>${id}</strong>:</p><blockquote style="border-left:2px solid #ccc;margin:8px 0;padding-left:12px;">${resolutionEsc}</blockquote><p>Log in to BasaKhuji to view the full evidence record.</p><p>— BasaKhuji</p>`,
+    html: `<p>Hi ${nameEsc},</p><p>An admin has issued a resolution for dispute Ref <strong>${id}</strong>:</p><blockquote style="border-left:2px solid #ccc;margin:8px 0;padding-left:12px;">${resolutionEsc}</blockquote><p>Log in to ঠিকানা to view the full evidence record.</p><p>— ঠিকানা</p>`,
   });
 }
 
@@ -120,7 +120,7 @@ export function expiryReminderEmail(to: string, tenantName: string, endDate: str
   return sendEmail({
     to,
     subject: `Your tenancy expires on ${endDate}`,
-    html: `<p>Hi ${name},</p><p>This is a reminder that your tenancy agreement expires on <strong>${date}</strong>. Please log in to BasaKhuji to renew or arrange a move-out.</p><p>— BasaKhuji</p>`,
+    html: `<p>Hi ${name},</p><p>This is a reminder that your tenancy agreement expires on <strong>${date}</strong>. Please log in to ঠিকানা to renew or arrange a move-out.</p><p>— ঠিকানা</p>`,
   });
 }
 
@@ -136,7 +136,7 @@ export function maintenanceFiledEmail(
   return sendEmail({
     to,
     subject: `New maintenance request — ${listingTitle}`,
-    html: `<p>Hi ${landlord},</p><p>A new maintenance request has been filed on <strong>${listing}</strong>: &ldquo;${title}&rdquo;. Please log in to BasaKhuji to review and respond.</p><p>— BasaKhuji</p>`,
+    html: `<p>Hi ${landlord},</p><p>A new maintenance request has been filed on <strong>${listing}</strong>: &ldquo;${title}&rdquo;. Please log in to ঠিকানা to review and respond.</p><p>— ঠিকানা</p>`,
   });
 }
 
@@ -154,7 +154,7 @@ export function maintenanceStatusEmail(
   return sendEmail({
     to,
     subject: `Maintenance request update — ${requestTitle}`,
-    html: `<p>Hi ${name},</p><p>Your maintenance request &ldquo;${title}&rdquo; on <strong>${listing}</strong> is now <strong>${statusLabel}</strong>.</p><p>— BasaKhuji</p>`,
+    html: `<p>Hi ${name},</p><p>Your maintenance request &ldquo;${title}&rdquo; on <strong>${listing}</strong> is now <strong>${statusLabel}</strong>.</p><p>— ঠিকানা</p>`,
   });
 }
 
@@ -170,6 +170,6 @@ export function newMessageEmail(
   return sendEmail({
     to,
     subject: `New message — ${listingTitle}`,
-    html: `<p>Hi ${nameEsc},</p><p><strong>${sender}</strong> sent you a new message on BasaKhuji about <strong>${listing}</strong>. Log in to read and reply.</p><p>— BasaKhuji</p>`,
+    html: `<p>Hi ${nameEsc},</p><p><strong>${sender}</strong> sent you a new message on ঠিকানা about <strong>${listing}</strong>. Log in to read and reply.</p><p>— ঠিকানা</p>`,
   });
 }

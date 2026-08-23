@@ -32,7 +32,7 @@ function fallbackClauses(t: AgreementTerms): AgreementClause[] {
   const clauses: AgreementClause[] = [
     {
       title: "Parties",
-      body: `This agreement is made between ${t.landlordName} (the "Landlord"), a BasaKhuji-verified property owner since ${t.landlordVerifiedSince}, and ${t.tenantName} (the "Tenant"), holder of National ID ${t.tenantNid}, contactable on ${t.tenantPhone}.`,
+      body: `This agreement is made between ${t.landlordName} (the "Landlord"), a Thikana-verified property owner since ${t.landlordVerifiedSince}, and ${t.tenantName} (the "Tenant"), holder of National ID ${t.tenantNid}, contactable on ${t.tenantPhone}.`,
     },
     {
       title: "Premises",
@@ -44,7 +44,7 @@ function fallbackClauses(t: AgreementTerms): AgreementClause[] {
     },
     {
       title: "Rent and deposit",
-      body: `Rent is BDT ${t.rent.toLocaleString("en-BD")} per month, payable by the 5th and logged on BasaKhuji. A refundable security deposit of BDT ${t.deposit.toLocaleString("en-BD")} is held and returned at final settlement, less documented deductions.`,
+      body: `Rent is BDT ${t.rent.toLocaleString("en-BD")} per month, payable by the 5th and logged on Thikana. A refundable security deposit of BDT ${t.deposit.toLocaleString("en-BD")} is held and returned at final settlement, less documented deductions.`,
     },
   ];
   if (t.houseRules.length > 0) {
@@ -77,14 +77,14 @@ export async function draftAgreementClauses(
     "Do not use markdown, bullet points, or clause numbers inside the text.",
     "",
     `Reference: ${terms.reference}`,
-    `Landlord: ${terms.landlordName} (BasaKhuji-verified since ${terms.landlordVerifiedSince})`,
+    `Landlord: ${terms.landlordName} (Thikana-verified since ${terms.landlordVerifiedSince})`,
     `Tenant: ${terms.tenantName}, National ID ${terms.tenantNid}, phone ${terms.tenantPhone}`,
     `Property: "${terms.propertyTitle}" — ${terms.roomType} at ${terms.area}, ${terms.city} (${terms.coords})`,
     `Monthly rent: BDT ${terms.rent.toLocaleString("en-BD")}, payable by the 5th`,
     `Security deposit: BDT ${terms.deposit.toLocaleString("en-BD")}, refundable`,
     `Term: ${terms.durationMonths} months, ${terms.startDate} to ${terms.endDate}`,
     ...(terms.houseRules.length > 0 ? [`House rules: ${terms.houseRules.join("; ")}`] : []),
-    "Both parties acknowledge the agreement inside BasaKhuji, and the platform record of payments, maintenance requests and messages is admissible evidence in any dispute.",
+    "Both parties acknowledge the agreement inside Thikana, and the platform record of payments, maintenance requests and messages is admissible evidence in any dispute.",
   ].join("\n");
 
   try {
