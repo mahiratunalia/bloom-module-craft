@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { Signal } from "@/components/trust";
 import { ReviewPanel } from "@/components/review-panel";
 import { MoveOutPanel } from "@/components/move-out-panel";
+import { ImprovementCostLog } from "@/components/improvement-cost-log";
 import { ActivityTimeline, type ActivityEventItem } from "@/components/activity-timeline";
 import { LandlordAnalyticsSection } from "@/components/analytics-dashboard";
 import {
@@ -939,6 +940,7 @@ export default function LandlordDeskPage() {
                             : "Activity timeline ▾"}
                         </button>
                         <MoveOutPanel applicationId={a.id} viewerIsLandlord />
+                        <ImprovementCostLog applicationId={a.id} viewerIsLandlord />
                       </div>
                     )}
                     {a.status === "completed" && (

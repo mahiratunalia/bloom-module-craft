@@ -108,9 +108,17 @@ function TrustTrendChart({ trend }: { trend: TrustPoint[] }) {
   );
 }
 
-function IncomeTrendChart({ trend }: { trend: { label: string; total: number }[] }) {
-  if (!trend.some((p) => p.total > 0)) {
-    return <p className="text-sm text-muted-foreground">No logged rent payments yet.</p>;
+function IncomeTrendChart({
+  trend,
+  seriesLabel = "Rent logged",
+  emptyMessage = "No logged rent payments yet.",
+}: {
+  trend: { label: string; total: number }[];
+  seriesLabel?: string;
+  emptyMessage?: string;
+}) {
+  if (!trend.some((p) => p.total !== 0)) {
+    return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
   }
   return (
     <div className="h-56 w-full">
@@ -127,7 +135,7 @@ function IncomeTrendChart({ trend }: { trend: { label: string; total: number }[]
           />
           <Tooltip
             contentStyle={tooltipStyle}
-            formatter={(value: number) => [bdt(value), "Rent logged"]}
+            formatter={(value: number) => [bdt(value), seriesLabel]}
           />
           <Bar dataKey="total" fill="var(--accent)" radius={[4, 4, 0, 0]} />
         </BarChart>
@@ -168,6 +176,15 @@ export function LandlordAnalyticsSection() {
         />
         <StatCard label="Rent logged this month" value={bdt(data.income.currentMonthTotal)} />
         <StatCard
+          label="Net yield this month"
+          value={bdt(data.netYield.currentMonthTotal)}
+          sub={
+            data.improvementSpend.currentMonthTotal > 0
+              ? `after ${bdt(data.improvementSpend.currentMonthTotal)} improvement spend`
+              : "no improvement spend logged this month"
+          }
+        />
+        <StatCard
           label="Avg. time to first tenant"
           value={data.vacancy.avgDays != null ? `${data.vacancy.avgDays}d` : "—"}
           sub={
@@ -189,18 +206,27 @@ export function LandlordAnalyticsSection() {
           <IncomeTrendChart trend={data.income.trend} />
         </div>
         <div>
-          <h3 className="eyebrow mb-4">Trust Score trend</h3>
-          <div className="mb-3 flex items-baseline gap-2">
-            <span className={`font-mono text-2xl tabular-nums ${scoreTone(data.trust.score)}`}>
-              {data.trust.score ?? "—"}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              / 100 · computed from your real payment, maintenance, verification, review and
-              agreement data
-            </span>
-          </div>
-          <TrustTrendChart trend={data.trust.trend} />
+          <h3 className="eyebrow mb-4">Net yield, last 6 months</h3>
+          <IncomeTrendChart
+            trend={data.netYield.trend}
+            seriesLabel="Net yield"
+            emptyMessage="No income or improvement spend logged yet."
+          />
         </div>
+      </div>
+
+      <div>
+        <h3 className="eyebrow mb-4">Trust Score trend</h3>
+        <div className="mb-3 flex items-baseline gap-2">
+          <span className={`font-mono text-2xl tabular-nums ${scoreTone(data.trust.score)}`}>
+            {data.trust.score ?? "—"}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            / 100 · computed from your real payment, maintenance, verification, review and agreement
+            data
+          </span>
+        </div>
+        <TrustTrendChart trend={data.trust.trend} />
       </div>
 
       <div>
