@@ -1,14 +1,47 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  LANDLORD_REVIEW_CATEGORIES,
+  TENANT_REVIEW_CATEGORIES,
+  categoriesForRatee,
+} from "@/lib/reviews";
 
 type Review = {
   id: string;
   rating: number;
   comment: string | null;
+  categoryRatings: Record<string, number> | null;
   raterIsTenant: boolean;
   raterName: string;
 };
+
+function Stars({ value }: { value: number }) {
+  return (
+    <span>
+      {"★".repeat(value)}
+      {"☆".repeat(5 - value)}
+    </span>
+  );
+}
+
+function CategoryBreakdown({ categoryRatings }: { categoryRatings: Record<string, number> }) {
+  const allCategories = [...LANDLORD_REVIEW_CATEGORIES, ...TENANT_REVIEW_CATEGORIES];
+  return (
+    <dl className="mt-2 space-y-1">
+      {Object.entries(categoryRatings).map(([key, value]) => (
+        <div key={key} className="flex items-center justify-between gap-3 text-xs">
+          <dt className="text-muted-foreground">
+            {allCategories.find((c) => c.key === key)?.label ?? key}
+          </dt>
+          <dd className="text-accent">
+            <Stars value={value} />
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 export function ReviewPanel({
   applicationId,
@@ -18,7 +51,12 @@ export function ReviewPanel({
   viewerIsTenant: boolean;
 }) {
   const [reviews, setReviews] = useState<Review[] | null>(null);
-  const [rating, setRating] = useState(5);
+  // The viewer is leaving a review ABOUT the other party, so the category
+  // set is keyed by the ratee's role — a tenant viewer rates a landlord.
+  const categories = categoriesForRatee(viewerIsTenant);
+  const [categoryRatings, setCategoryRatings] = useState<Record<string, number>>(
+    Object.fromEntries(categories.map((c) => [c.key, 5])),
+  );
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +80,7 @@ export function ReviewPanel({
       const res = await fetch("/api/reviews", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ applicationId, rating, comment: comment || undefined }),
+        body: JSON.stringify({ applicationId, categoryRatings, comment: comment || undefined }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Could not submit review.");
@@ -72,9 +110,11 @@ export function ReviewPanel({
         <div className="text-sm">
           <span className="eyebrow">Your review</span>
           <p className="mt-1">
-            {"★".repeat(myReview.rating)}
-            {"☆".repeat(5 - myReview.rating)}
+            <Stars value={myReview.rating} />
           </p>
+          {myReview.categoryRatings && (
+            <CategoryBreakdown categoryRatings={myReview.categoryRatings} />
+          )}
           {myReview.comment && (
             <p className="mt-1 text-muted-foreground italic">&ldquo;{myReview.comment}&rdquo;</p>
           )}
@@ -82,17 +122,26 @@ export function ReviewPanel({
       ) : (
         <form onSubmit={submit} className="space-y-3">
           <span className="eyebrow">Leave a review</span>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setRating(n)}
-                aria-label={`${n} star${n > 1 ? "s" : ""}`}
-                className={`text-lg ${n <= rating ? "text-accent" : "text-muted-foreground"}`}
-              >
-                ★
-              </button>
+          <div className="space-y-2">
+            {categories.map((c) => (
+              <div key={c.key} className="flex items-center justify-between gap-3">
+                <span className="text-xs text-muted-foreground">{c.label}</span>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setCategoryRatings((prev) => ({ ...prev, [c.key]: n }))}
+                      aria-label={`${c.label}: ${n} star${n > 1 ? "s" : ""}`}
+                      className={`text-lg ${
+                        n <= categoryRatings[c.key] ? "text-accent" : "text-muted-foreground"
+                      }`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
           <textarea
@@ -117,9 +166,11 @@ export function ReviewPanel({
         <div className="text-sm">
           <span className="eyebrow">{otherReview.raterName}&apos;s review</span>
           <p className="mt-1">
-            {"★".repeat(otherReview.rating)}
-            {"☆".repeat(5 - otherReview.rating)}
+            <Stars value={otherReview.rating} />
           </p>
+          {otherReview.categoryRatings && (
+            <CategoryBreakdown categoryRatings={otherReview.categoryRatings} />
+          )}
           {otherReview.comment && (
             <p className="mt-1 text-muted-foreground italic">&ldquo;{otherReview.comment}&rdquo;</p>
           )}

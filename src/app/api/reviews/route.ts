@@ -3,10 +3,26 @@ import { getToken } from "next-auth/jwt";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import {
+  LANDLORD_REVIEW_CATEGORIES,
+  TENANT_REVIEW_CATEGORIES,
+  overallFromCategories,
+} from "@/lib/reviews";
+
+const landlordCategorySchema = z.object(
+  Object.fromEntries(
+    LANDLORD_REVIEW_CATEGORIES.map((c) => [c.key, z.number().int().min(1).max(5)]),
+  ) as Record<(typeof LANDLORD_REVIEW_CATEGORIES)[number]["key"], z.ZodNumber>,
+);
+const tenantCategorySchema = z.object(
+  Object.fromEntries(
+    TENANT_REVIEW_CATEGORIES.map((c) => [c.key, z.number().int().min(1).max(5)]),
+  ) as Record<(typeof TENANT_REVIEW_CATEGORIES)[number]["key"], z.ZodNumber>,
+);
 
 const createSchema = z.object({
   applicationId: z.string().min(1),
-  rating: z.number().int().min(1).max(5),
+  categoryRatings: z.record(z.string(), z.number()),
   comment: z.string().optional(),
 });
 
@@ -45,6 +61,7 @@ export async function GET(request: NextRequest) {
       id: r.id,
       rating: r.rating,
       comment: r.comment,
+      categoryRatings: r.categoryRatings,
       createdAt: r.createdAt,
       raterIsTenant: r.raterProfileId === application.profileId,
       raterName: r.raterProfile.displayName,
@@ -87,13 +104,23 @@ export async function POST(request: NextRequest) {
     : (await prisma.profile.findUnique({ where: { userId } }))?.id;
   if (!raterProfileId) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
 
+  // A tenant rates the landlord, so their categories are the landlord set,
+  // and vice versa — reject the wrong category set outright rather than
+  // silently accepting mismatched keys.
+  const categorySchema = isTenant ? landlordCategorySchema : tenantCategorySchema;
+  const categoryParsed = categorySchema.safeParse(parsed.data.categoryRatings);
+  if (!categoryParsed.success) {
+    return NextResponse.json({ error: "Invalid category ratings for this role." }, { status: 400 });
+  }
+
   try {
     const review = await prisma.review.create({
       data: {
         applicationId: application.id,
         raterProfileId,
-        rating: parsed.data.rating,
+        rating: overallFromCategories(categoryParsed.data),
         comment: parsed.data.comment,
+        categoryRatings: categoryParsed.data,
       },
     });
     return NextResponse.json(review, { status: 201 });
