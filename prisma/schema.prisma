@@ -88,6 +88,7 @@ model Profile {
   activityEvents       ActivityEvent[]
   disputesFiled        Dispute[]
   messagesSent         Message[]
+  matchPreference      ListingMatchPreference?
 }
 
 model Listing {
@@ -239,6 +240,28 @@ model RoommatePreference {
   visitors             String
   updatedAt            DateTime @updatedAt
   profile              Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+// Personalized Listing Match Score: a one-time tenant-to-listing preference
+// profile, distinct from RoommatePreference (tenant-to-tenant). hasPets/
+// smokes/frequentVisitors are the tenant's own traits, checked at score time
+// against a listing's houseRules/description text for a hard deal-breaker
+// filter — mustHaves is collected but not scored (same "collected, not part
+// of the formula" precedent as RoommatePreference.cooking above).
+model ListingMatchPreference {
+  id                 String   @id @default(cuid())
+  profileId          String   @unique
+  budgetCeiling      Int
+  commuteAnchorLabel String
+  commuteAnchorLat   Float
+  commuteAnchorLng   Float
+  roomType           String
+  hasPets            Boolean  @default(false)
+  smokes             Boolean  @default(false)
+  frequentVisitors   Boolean  @default(false)
+  mustHaves          String[] @default([])
+  updatedAt          DateTime @updatedAt
+  profile            Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 }
 
 model RoommateSession {
