@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity.server";
 import { buildEvidenceBundle, generateDisputeAnalysis } from "@/lib/dispute.server";
+import { getApprovedImprovementCostAdjustment } from "@/lib/improvement-cost.server";
 import {
   disputeFiledConfirmationEmail,
   disputeNotificationEmail,
@@ -78,12 +79,15 @@ export async function recomputeSettlement(moveOutId: string) {
     include: { application: { include: { listing: true } } },
   });
   const deductions = (moveOut.deductionsJson as unknown as Deduction[]) ?? [];
-  const totalRentPaid = await sumPaidRent(
-    moveOut.application.listingId,
-    moveOut.application.profileId,
-  );
+  const [totalRentPaid, improvementAdjustment] = await Promise.all([
+    sumPaidRent(moveOut.application.listingId, moveOut.application.profileId),
+    getApprovedImprovementCostAdjustment(moveOut.applicationId),
+  ]);
   const depositAmount = moveOut.application.listing.deposit;
-  const netRefund = Math.max(0, depositAmount - sumDeductions(deductions));
+  const netRefund = Math.max(
+    0,
+    depositAmount - sumDeductions(deductions) + improvementAdjustment.net,
+  );
 
   return prisma.moveOut.update({
     where: { id: moveOutId },

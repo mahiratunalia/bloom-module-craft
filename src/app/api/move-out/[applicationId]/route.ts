@@ -9,6 +9,7 @@ import {
   finalizeMoveOut,
   escalateMoveOutToDispute,
 } from "@/lib/move-out.server";
+import { getApprovedImprovementCostAdjustment } from "@/lib/improvement-cost.server";
 
 const MAX_DEDUCTIONS = 20;
 const MAX_PHOTO_CHARS = 2_200_000; // same cap used elsewhere for base64 photo uploads
@@ -61,8 +62,11 @@ export async function GET(
   if (!isTenant && !isLandlord) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (!application.moveOut) return NextResponse.json(null);
 
+  const improvementAdjustment = await getApprovedImprovementCostAdjustment(applicationId);
+
   return NextResponse.json({
     ...application.moveOut,
+    improvementAdjustment,
     isTenant,
     isLandlord,
   });

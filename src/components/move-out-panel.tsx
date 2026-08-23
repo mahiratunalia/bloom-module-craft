@@ -20,6 +20,7 @@ type MoveOutState = {
   tenantConfirmedAt: string | null;
   refundReference: string | null;
   disputeId: string | null;
+  improvementAdjustment: { tenantCredit: number; landlordDebit: number; net: number };
   isTenant: boolean;
   isLandlord: boolean;
 } | null;
@@ -226,6 +227,17 @@ export function MoveOutPanel({
             <dd className="text-right">
               {bdt(moveOut.deductionsJson.reduce((s, d) => s + d.amount, 0))}
             </dd>
+            {moveOut.improvementAdjustment.net !== 0 && (
+              <>
+                <dt className="text-muted-foreground">Approved improvement costs</dt>
+                <dd
+                  className={`text-right ${moveOut.improvementAdjustment.net > 0 ? "text-primary" : "text-destructive"}`}
+                >
+                  {moveOut.improvementAdjustment.net > 0 ? "+" : "-"}
+                  {bdt(Math.abs(moveOut.improvementAdjustment.net))}
+                </dd>
+              </>
+            )}
             <dt className="font-medium text-foreground">Net refund</dt>
             <dd className="text-right font-medium text-foreground">{bdt(moveOut.netRefund)}</dd>
           </dl>

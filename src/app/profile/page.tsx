@@ -10,6 +10,7 @@ import { VerifyIdentity } from "./verify-identity";
 import { ReviewPanel } from "@/components/review-panel";
 import { PayRentForm } from "./pay-rent-form";
 import { MoveOutPanel } from "@/components/move-out-panel";
+import { ImprovementCostLog } from "@/components/improvement-cost-log";
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { TenantAnalyticsSection } from "@/components/analytics-dashboard";
 import { Signal } from "@/components/trust";
@@ -244,6 +245,7 @@ export default async function ProfilePage({
                     </div>
                     <PayRentForm listingId={app.listingId} rent={app.listing.rent} />
                     <MoveOutPanel applicationId={app.id} viewerIsLandlord={false} />
+                    <ImprovementCostLog applicationId={app.id} viewerIsLandlord={false} />
                     <div className="mt-5 border-t border-border pt-5">
                       <p className="eyebrow mb-4">Activity timeline</p>
                       <ActivityTimeline events={activityByListing.get(app.listingId) ?? []} />
