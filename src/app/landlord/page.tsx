@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 
 import { Signal } from "@/components/trust";
 import { ReviewPanel } from "@/components/review-panel";
+import { MoveOutPanel } from "@/components/move-out-panel";
 import { ActivityTimeline, type ActivityEventItem } from "@/components/activity-timeline";
 import { LandlordAnalyticsSection } from "@/components/analytics-dashboard";
 import {
@@ -930,14 +931,6 @@ export default function LandlordDeskPage() {
                         </Link>
                         <button
                           type="button"
-                          disabled={actingOn === a.id}
-                          onClick={() => setApplicationStatus(a.id, "completed")}
-                          className="mt-2 block w-full text-center text-xs text-muted-foreground underline underline-offset-4 disabled:opacity-60"
-                        >
-                          Mark tenancy as ended
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => toggleTimeline(a.profile.id)}
                           className="text-center text-xs text-muted-foreground underline underline-offset-4"
                         >
@@ -945,6 +938,7 @@ export default function LandlordDeskPage() {
                             ? "Hide timeline ▴"
                             : "Activity timeline ▾"}
                         </button>
+                        <MoveOutPanel applicationId={a.id} viewerIsLandlord />
                       </div>
                     )}
                     {a.status === "completed" && (

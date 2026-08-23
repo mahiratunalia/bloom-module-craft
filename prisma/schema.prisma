@@ -52,6 +52,13 @@ enum DisputeStatus {
   resolved
 }
 
+enum MoveOutStatus {
+  proposed
+  acknowledged
+  settled
+  disputed
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -140,6 +147,7 @@ model Application {
   maintenanceRequests MaintenanceRequest[]
   disputes  Dispute[]
   messages  Message[]
+  moveOut   MoveOut?
 
   @@unique([profileId, listingId])
 }
@@ -226,6 +234,36 @@ model Message {
   sender      Profile     @relation(fields: [senderProfileId], references: [id], onDelete: Cascade)
 
   @@index([applicationId])
+}
+
+// Move-Out & Final Settlement: one row per tenancy (applicationId is unique),
+// a small state machine rather than a status string, since each step gates
+// on a specific prior step actually having happened (you can't set deductions
+// before the tenant has acknowledged an end date, can't finalize before both
+// parties confirm). `disputed` is an escape hatch, not a dead end — tenantConfirmedAt
+// staying null and disputeId being set means the tenant rejected the settlement
+// and it escalated into Smart Evidence Resolution instead of silently stalling.
+// Reaching `settled` is what flips Application.status to "completed", which is
+// the same flag Reviews and the landlord's vacancy/occupancy numbers already key off.
+model MoveOut {
+  id                   String        @id @default(cuid())
+  applicationId        String        @unique
+  proposedEndDate      DateTime
+  status               MoveOutStatus @default(proposed)
+  tenantAcknowledgedAt DateTime?
+  totalRentPaid        Int           @default(0)
+  depositAmount        Int           @default(0)
+  deductionsJson       Json          @default("[]")
+  netRefund            Int           @default(0)
+  landlordConfirmedAt  DateTime?
+  tenantConfirmedAt    DateTime?
+  refundReference      String?
+  refundLoggedAt       DateTime?
+  disputeId            String?
+  createdAt            DateTime      @default(now())
+  settledAt            DateTime?
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 }
 
 model RoommatePreference {
@@ -388,18 +426,24 @@ model TenantVerification {
 }
 
 model AgreementDraft {
-  id                String    @id @default(cuid())
-  profileId         String
-  reference         String
-  termsJson         Json
-  clausesJson       Json
-  source            String
-  createdAt         DateTime  @default(now())
-  tenantSignature   String?   @db.Text
-  tenantSignedAt    DateTime?
-  landlordSignature String?   @db.Text
-  landlordSignedAt  DateTime?
-  profile           Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  id                     String    @id @default(cuid())
+  profileId              String
+  reference              String
+  termsJson              Json
+  clausesJson            Json
+  source                 String
+  createdAt              DateTime  @default(now())
+  tenantSignature        String?   @db.Text
+  tenantSignedAt         DateTime?
+  landlordSignature      String?   @db.Text
+  landlordSignedAt       DateTime?
+  // Dedup guards for the scheduled expiry reminder scan (Vacancy & Agreement
+  // Expiry Notification System) — without these, a scan that runs more than
+  // once inside the same 30-day or 7-day window would re-send the same
+  // reminder every time it runs.
+  expiry30ReminderSentAt DateTime?
+  expiry7ReminderSentAt  DateTime?
+  profile                Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@unique([profileId, reference])
 }
