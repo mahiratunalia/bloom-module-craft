@@ -21,12 +21,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border bg-paper/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-5">
         <Link href="/" className="flex items-baseline gap-2">
-          <span className="font-display text-xl font-bold uppercase leading-none tracking-tight">
-            BasaKhuji
-          </span>
-          <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground sm:inline">
-            Module 1
-          </span>
+          <span className="font-display text-xl font-bold leading-none tracking-tight">ঠিকানা</span>
         </Link>
         <nav className="flex items-center gap-1">
           {staticNav.map((item) => (
@@ -38,6 +33,14 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
+          {!isLandlord && (
+            <Link
+              className="border-b-2 border-transparent px-2 py-1 text-[13px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground sm:px-3"
+              href="/matches"
+            >
+              Matches
+            </Link>
+          )}
           {!isLandlord && (
             <Link
               className="border-b-2 border-transparent px-2 py-1 text-[13px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground sm:px-3"

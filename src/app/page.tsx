@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 
 import {
   ArrowDown,
@@ -25,6 +26,7 @@ import placeholder3 from "@/assets/listing-3.jpg";
 import { VerifiedBadge } from "@/components/trust";
 import { bdt, formatDate, type RoomType } from "@/data/module1";
 import type { LandlordSummary } from "@/lib/landlord-summary.server";
+import { matchScore, type MatchPreference } from "@/lib/match";
 
 const placeholderPhotos = [placeholder1, placeholder2, placeholder3];
 
@@ -40,6 +42,7 @@ type ApiListing = {
   id: string;
   title: string;
   area: string;
+  city: string;
   rent: number;
   roomType: string;
   availableFrom: string;
@@ -47,6 +50,10 @@ type ApiListing = {
   landlord: LandlordSummary;
   photoUrls: string[];
   sqft: number | null;
+  latitude: number;
+  longitude: number;
+  description: string | null;
+  houseRules: string[];
   _count: { applications: number };
 };
 
@@ -61,10 +68,12 @@ export default function HomePage() {
 function HomePageInner() {
   const searchParams = useSearchParams();
   const requestedRoomType = searchParams.get("roomType");
+  const { data: session } = useSession();
 
   const [listings, setListings] = useState<ApiListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [matchPref, setMatchPref] = useState<MatchPreference | null>(null);
 
   const [area, setArea] = useState("Any area");
   const [roomType, setRoomType] = useState<RoomType | "Any">(
@@ -81,9 +90,23 @@ function HomePageInner() {
   // Empty = no filter. A hardcoded default date here would silently hide any
   // listing whose move-in date falls after it — including brand new ones.
   const [availableBy, setAvailableBy] = useState("");
-  const [sort, setSort] = useState<"verified" | "rent">("verified");
+  const [sort, setSort] = useState<"verified" | "rent" | "match">("verified");
 
   const scrollerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (session?.user?.role === "LANDLORD" || session?.user?.accountType === "landlord") return;
+    let cancelled = false;
+    fetch("/api/match/preference")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setMatchPref(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +155,16 @@ function HomePageInner() {
   const effectiveMinRent = minRent ?? rentBounds.min;
   const effectiveMaxRent = maxRent ?? rentBounds.max;
 
+  // Personalized Listing Match Score — deterministic, computed client-side
+  // per listing (same on-the-fly pattern as Roommate Compatibility), only
+  // when the tenant has saved a preference on /matches.
+  const matchByListingId = useMemo(() => {
+    if (!matchPref) return null;
+    const map = new Map<string, number>();
+    for (const l of listings) map.set(l.id, matchScore(matchPref, l).total);
+    return map;
+  }, [listings, matchPref]);
+
   const results = useMemo(() => {
     return listings
       .filter((l) => (area === "Any area" ? true : l.area === area))
@@ -139,12 +172,23 @@ function HomePageInner() {
       .filter((l) => l.rent >= effectiveMinRent && l.rent <= effectiveMaxRent)
       .filter((l) => !availableBy || new Date(l.availableFrom) <= new Date(availableBy))
       .sort((a, b) =>
-        sort === "rent"
-          ? a.rent - b.rent
-          : Number(b.landlord.verified) - Number(a.landlord.verified) ||
-            b.landlord.totalApplicants - a.landlord.totalApplicants,
+        sort === "match" && matchByListingId
+          ? (matchByListingId.get(b.id) ?? 0) - (matchByListingId.get(a.id) ?? 0)
+          : sort === "rent"
+            ? a.rent - b.rent
+            : Number(b.landlord.verified) - Number(a.landlord.verified) ||
+              b.landlord.totalApplicants - a.landlord.totalApplicants,
       );
-  }, [listings, area, roomType, effectiveMinRent, effectiveMaxRent, availableBy, sort]);
+  }, [
+    listings,
+    area,
+    roomType,
+    effectiveMinRent,
+    effectiveMaxRent,
+    availableBy,
+    sort,
+    matchByListingId,
+  ]);
 
   const verifiedLandlordCount = useMemo(
     () => new Set(listings.filter((l) => l.landlord.verified).map((l) => l.landlordId)).size,
@@ -181,9 +225,14 @@ function HomePageInner() {
         </div>
 
         <div className="absolute inset-x-0 bottom-0 flex flex-col gap-6 px-6 pb-8 sm:flex-row sm:items-end sm:justify-between sm:px-10 sm:pb-12">
-          <h1 className="font-display text-[15vw] font-bold uppercase leading-[0.85] tracking-tight text-white sm:text-[6.5rem]">
-            BasaKhuji
-          </h1>
+          <div>
+            <h1 className="font-display text-[15vw] font-bold leading-[0.85] tracking-tight text-white sm:text-[6.5rem]">
+              ঠিকানা
+            </h1>
+            <p className="mt-2 font-mono text-sm uppercase tracking-[0.2em] text-white/80">
+              find your somewhere
+            </p>
+          </div>
           <div className="flex items-center gap-4 sm:flex-col sm:items-end sm:gap-3">
             <div className="rounded-full border border-white/25 bg-white/10 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.15em] text-white backdrop-blur-sm">
               {listings.length} active listing{listings.length === 1 ? "" : "s"} · {landlordCount}{" "}
@@ -209,8 +258,8 @@ function HomePageInner() {
             not a promise
           </h2>
           <p className="font-mono text-[11px] uppercase leading-relaxed tracking-[0.1em] text-muted-foreground">
-            From identity checks to application ranking, every layer of BasaKhuji is built to close
-            the trust gap in informal rentals.
+            From identity checks to application ranking, every layer of ঠিকানা is built to close the
+            trust gap in informal rentals.
           </p>
         </div>
 
@@ -297,11 +346,12 @@ function HomePageInner() {
             <Field label="Sort by">
               <select
                 value={sort}
-                onChange={(e) => setSort(e.target.value as "verified" | "rent")}
+                onChange={(e) => setSort(e.target.value as "verified" | "rent" | "match")}
                 className={inputCls}
               >
                 <option value="verified">Verified landlords first</option>
                 <option value="rent">Lowest rent</option>
+                {matchByListingId && <option value="match">Best match for you</option>}
               </select>
             </Field>
           </div>
@@ -399,8 +449,13 @@ function HomePageInner() {
                 <Link
                   key={l.id}
                   href={`/listings/${l.id}`}
-                  className="group block w-[320px] shrink-0 snap-start overflow-hidden rounded-2xl border border-border bg-card transition-colors hover:border-foreground/40"
+                  className="group relative block w-[320px] shrink-0 snap-start overflow-hidden rounded-2xl border border-border bg-card transition-colors hover:border-foreground/40"
                 >
+                  {matchByListingId && (
+                    <span className="absolute left-3 top-3 z-10 rounded-full bg-primary/90 px-2.5 py-1 font-mono text-[11px] tabular-nums text-primary-foreground backdrop-blur">
+                      {matchByListingId.get(l.id) ?? 0}% match
+                    </span>
+                  )}
                   <img
                     src={photoSrc}
                     alt={l.title}
