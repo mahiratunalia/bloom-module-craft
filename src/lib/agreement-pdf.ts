@@ -39,7 +39,7 @@ export function downloadAgreementPdf(a: PdfAgreement) {
   doc.setFont("courier", "normal");
   doc.setFontSize(9);
   doc.setTextColor(110);
-  doc.text(`Thikana · Ref ${a.reference} · generated ${a.generatedOn}`, MARGIN, y);
+  doc.text(`rentFindr · Ref ${a.reference} · generated ${a.generatedOn}`, MARGIN, y);
   y += 18;
   doc.setDrawColor(160);
   doc.line(MARGIN, y, PAGE_W - MARGIN, y);
@@ -116,5 +116,5 @@ export function downloadAgreementPdf(a: PdfAgreement) {
   signature("Tenant", a.tenantName, a.tenantSignature, MARGIN);
   signature("Landlord", a.landlordName, a.landlordSignature, MARGIN + half);
 
-  doc.save(`Thikana-agreement-${a.reference.replace(/\//g, "-")}.pdf`);
+  doc.save(`rentFindr-agreement-${a.reference.replace(/\//g, "-")}.pdf`);
 }

@@ -181,20 +181,9 @@ function HomePageInner() {
         </div>
 
         <div className="absolute inset-x-0 bottom-0 flex flex-col gap-6 px-6 pb-8 sm:flex-row sm:items-end sm:justify-between sm:px-10 sm:pb-12">
-<<<<<<< Updated upstream
           <h1 className="font-display text-[15vw] font-bold uppercase leading-[0.85] tracking-tight text-white sm:text-[6.5rem]">
             BasaKhuji
           </h1>
-=======
-          <div>
-            <h1 className="font-display text-[15vw] font-bold leading-[0.85] tracking-tight text-white sm:text-[6.5rem]">
-              rentFindr
-            </h1>
-            <p className="mt-2 font-mono text-sm uppercase tracking-[0.2em] text-white/80">
-              find your somewhere
-            </p>
-          </div>
->>>>>>> Stashed changes
           <div className="flex items-center gap-4 sm:flex-col sm:items-end sm:gap-3">
             <div className="rounded-full border border-white/25 bg-white/10 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.15em] text-white backdrop-blur-sm">
               {listings.length} active listing{listings.length === 1 ? "" : "s"} · {landlordCount}{" "}
@@ -220,11 +209,7 @@ function HomePageInner() {
             not a promise
           </h2>
           <p className="font-mono text-[11px] uppercase leading-relaxed tracking-[0.1em] text-muted-foreground">
-<<<<<<< Updated upstream
             From identity checks to application ranking, every layer of BasaKhuji is built to close
-=======
-            From identity checks to application ranking, every layer of rentFindr is built to close
->>>>>>> Stashed changes
             the trust gap in informal rentals.
           </p>
         </div>

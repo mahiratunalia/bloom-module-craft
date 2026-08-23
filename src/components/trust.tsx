@@ -133,7 +133,7 @@ export function CredibilityStrip({
             owner.verified ? `Identity & ownership · ${owner.verifiedSince}` : "Identity unverified"
           }
           state={owner.verified ? "verified" : "pending"}
-          note="NID, property ownership proof and phone number checked by ঠিকানা"
+          note="NID, property ownership proof and phone number checked by rentFindr"
         />
         <VerificationStatus
           label={`Replies in ~${owner.avgResponseHours}h`}
