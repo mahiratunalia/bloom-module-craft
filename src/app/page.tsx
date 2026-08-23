@@ -227,7 +227,7 @@ function HomePageInner() {
         <div className="absolute inset-x-0 bottom-0 flex flex-col gap-6 px-6 pb-8 sm:flex-row sm:items-end sm:justify-between sm:px-10 sm:pb-12">
           <div>
             <h1 className="font-display text-[15vw] font-bold leading-[0.85] tracking-tight text-white sm:text-[6.5rem]">
-              ঠিকানা
+              rentFindr
             </h1>
             <p className="mt-2 font-mono text-sm uppercase tracking-[0.2em] text-white/80">
               find your somewhere
@@ -258,8 +258,8 @@ function HomePageInner() {
             not a promise
           </h2>
           <p className="font-mono text-[11px] uppercase leading-relaxed tracking-[0.1em] text-muted-foreground">
-            From identity checks to application ranking, every layer of ঠিকানা is built to close the
-            trust gap in informal rentals.
+            From identity checks to application ranking, every layer of rentFindr is built to close
+            the trust gap in informal rentals.
           </p>
         </div>
 
