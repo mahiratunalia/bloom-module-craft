@@ -9,6 +9,7 @@ import { ReviewPanel } from "@/components/review-panel";
 import { MoveOutPanel } from "@/components/move-out-panel";
 import { ActivityTimeline, type ActivityEventItem } from "@/components/activity-timeline";
 import { LandlordAnalyticsSection } from "@/components/analytics-dashboard";
+import { LandlordLeaseCalendar } from "@/components/landlord-lease-calendar";
 import {
   bdt,
   compatibility,
@@ -476,6 +477,15 @@ export default function LandlordDeskPage() {
       <section className="mt-12">
         <h2 className="text-2xl">Analytics</h2>
         <LandlordAnalyticsSection />
+      </section>
+
+      <section className="mt-16">
+        <h2 className="text-2xl mb-1">Renewal calendar</h2>
+        <p className="mb-6 text-xs text-muted-foreground">
+          Every active, fully-signed tenancy across your portfolio, grouped by the month its
+          renewal-decision window opens.
+        </p>
+        <LandlordLeaseCalendar />
       </section>
 
       <section className="mt-16">

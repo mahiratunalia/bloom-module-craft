@@ -15,6 +15,8 @@ import { TenantAnalyticsSection } from "@/components/analytics-dashboard";
 import { Signal } from "@/components/trust";
 import { getTenantHistory } from "@/lib/tenant-history.server";
 import { SavedListingsCompare } from "@/components/saved-listings-compare";
+import { getTenantLeaseTimelines } from "@/lib/lease-timeline.server";
+import { LeaseTimelineBar } from "@/components/lease-timeline-bar";
 
 type RoommateSessionProfileData = {
   budget?: number;
@@ -49,8 +51,15 @@ export default async function ProfilePage({
 
   if (!user?.profile) redirect("/auth");
 
-  const [savedListings, applications, roommateSessions, agreementDrafts, reviewsReceived, history] =
-    await Promise.all([
+  const [
+    savedListings,
+    applications,
+    roommateSessions,
+    agreementDrafts,
+    reviewsReceived,
+    history,
+    leaseTimelines,
+  ] = await Promise.all([
       // Only the count is used here now — the detailed comparison table
       // (rent, Trust Score, Match %, distance) fetches its own data client-side.
       prisma.savedListing.count({ where: { profileId: user.profile.id } }),
@@ -76,6 +85,7 @@ export default async function ProfilePage({
         orderBy: { createdAt: "desc" },
       }),
       getTenantHistory(user.profile.id),
+      getTenantLeaseTimelines(user.profile.id),
     ]);
 
   const profile = user.profile;
@@ -149,6 +159,25 @@ export default async function ProfilePage({
             initialStatus={profile.tenantVerification?.status ?? null}
             initialNote={profile.tenantVerification?.reviewNote ?? null}
           />
+        </section>
+      )}
+
+      {/* Lease timeline (tenants only) */}
+      {profile.accountType === "tenant" && leaseTimelines.length > 0 && (
+        <section className="mt-12">
+          <h2 className="text-2xl mb-1">Lease timeline</h2>
+          <p className="mb-6 text-xs text-muted-foreground">
+            Move-in, elapsed tenancy, and the renewal-decision window — the same dates the
+            expiry reminder emails use.
+          </p>
+          <div className="space-y-6">
+            {leaseTimelines.map((t) => (
+              <div key={t.applicationId} className="rounded-2xl border border-border bg-[var(--card)] p-6">
+                <p className="mb-3 text-sm font-medium">{t.listingTitle}</p>
+                <LeaseTimelineBar timeline={t} />
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
