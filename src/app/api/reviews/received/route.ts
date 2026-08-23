@@ -13,13 +13,13 @@ export async function GET(request: NextRequest) {
   const profile = await prisma.profile.findUnique({ where: { userId } });
   if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
 
-  // Reviews received as a tenant: written on one of my own applications, by someone who isn't me.
+  // Reviews received as a tenant
   const asTenant = await prisma.review.findMany({
     where: { application: { profileId: profile.id }, raterProfileId: { not: profile.id } },
     include: { application: { include: { listing: { select: { title: true } } } } },
   });
 
-  // Reviews received as a landlord: written on an application for one of my listings, by someone who isn't me.
+  // Reviews received as a landlord
   const asLandlord = await prisma.review.findMany({
     where: {
       application: { listing: { landlordId: userId } },
@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
     id: r.id,
     rating: r.rating,
     comment: r.comment,
+    categoryRatings: r.categoryRatings,
     createdAt: r.createdAt,
     listingTitle: r.application.listing.title,
   }));
