@@ -15,6 +15,13 @@ const typeGlyph: Record<string, string> = {
   dispute_filed: "⚑",
   dispute_resolved: "✓",
   message_flagged: "✉",
+  move_out_proposed: "⌂",
+  move_out_acknowledged: "✓",
+  move_out_deductions_set: "৳",
+  move_out_confirmed: "✓",
+  move_out_settled: "✓",
+  expiry_reminder_sent: "⏰",
+  rent_due_reminder_sent: "⏰",
 };
 
 export function ActivityTimeline({ events }: { events: ActivityEventItem[] }) {
