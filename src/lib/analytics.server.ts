@@ -13,7 +13,7 @@ const ACTIVE_APPLICATION_STATUSES = ["accepted", "completed"] as const;
  * of the sum and the remaining weights are renormalized, rather than
  * defaulting a component to a fabricated number.
  */
-function weightedScore(breakdown: NullableTrustBreakdown): number | null {
+export function weightedScore(breakdown: NullableTrustBreakdown): number | null {
   let weightSum = 0;
   let scoreSum = 0;
   for (const w of TRUST_WEIGHTS) {
@@ -54,7 +54,7 @@ function avg(values: number[]): number | null {
   return values.length ? values.reduce((s, v) => s + v, 0) / values.length : null;
 }
 
-async function landlordTrustComponents(
+export async function landlordTrustComponents(
   landlordUserId: string,
   asOf: Date,
 ): Promise<NullableTrustBreakdown> {
@@ -128,6 +128,23 @@ async function landlordTrustComponents(
     reviews: reviewScore,
     agreements,
   };
+}
+
+/**
+ * Just the number, for N distinct landlords at once — used by the Saved
+ * Listings comparison table, which needs a Trust Score per row without
+ * pulling each landlord's full analytics payload (occupancy, income trend,
+ * 6-month trust trend, etc.) the way getLandlordAnalytics() does.
+ */
+export async function getTrustScoresForLandlords(
+  landlordIds: string[],
+): Promise<Map<string, number | null>> {
+  const ids = Array.from(new Set(landlordIds));
+  const now = new Date();
+  const scores = await Promise.all(
+    ids.map(async (id) => weightedScore(await landlordTrustComponents(id, now))),
+  );
+  return new Map(ids.map((id, i) => [id, scores[i]!]));
 }
 
 async function tenantTrustComponents(

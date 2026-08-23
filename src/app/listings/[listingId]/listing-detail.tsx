@@ -10,6 +10,7 @@ import placeholder3 from "@/assets/listing-3.jpg";
 import { Signal, VerifiedBadge } from "@/components/trust";
 import { bdt, formatDate } from "@/data/module1";
 import type { LandlordSummary } from "@/lib/landlord-summary.server";
+import type { PropertyHistory } from "@/lib/property-history.server";
 
 const ListingMap = dynamic(() => import("@/components/listing-map"), { ssr: false });
 
@@ -42,9 +43,11 @@ export type ListingDetailData = {
 export function ListingDetail({
   listing,
   owner,
+  history,
 }: {
   listing: ListingDetailData;
   owner: LandlordSummary;
+  history: PropertyHistory;
 }) {
   const [applying, setApplying] = useState(false);
   const [applyMsg, setApplyMsg] = useState<string | null>(null);
@@ -214,6 +217,26 @@ export function ListingDetail({
               <ListingMap lat={listing.latitude} lng={listing.longitude} label={listing.title} />
             </div>
           </section>
+
+          <section className="mt-10">
+            <h2 className="text-2xl">History</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Aggregate record for this property — anonymized, no tenant identities.
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-5 rounded-2xl border border-border bg-[var(--card)] p-6 sm:grid-cols-4">
+              <Signal label="Past tenancies" value={`${history.pastTenancyCount}`} />
+              <Signal
+                label="Avg. tenancy length"
+                value={
+                  history.avgTenancyMonths != null
+                    ? `${history.avgTenancyMonths} mo`
+                    : "No data yet"
+                }
+              />
+              <Signal label="Disputes resolved" value={`${history.resolvedDisputeCount}`} />
+              <Signal label="Disputes filed" value={`${history.totalDisputeCount}`} />
+            </div>
+          </section>
         </div>
 
         <aside className="space-y-6">
@@ -235,9 +258,8 @@ export function ListingDetail({
               <Signal label="Available from" value={formatDate(listing.availableFrom)} />
             </div>
             <p className="mt-6 text-xs text-muted-foreground">
-              Full Trust Score (payment history, maintenance response, disputes) activates once
-              those features go live. Right now this reflects real, admin-verified identity status
-              only.
+              This card shows real, admin-verified identity status. See the History section below
+              for this property&apos;s tenancy and dispute record.
             </p>
           </div>
 

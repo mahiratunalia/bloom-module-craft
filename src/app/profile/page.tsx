@@ -11,6 +11,9 @@ import { ReviewPanel } from "@/components/review-panel";
 import { PayRentForm } from "./pay-rent-form";
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { TenantAnalyticsSection } from "@/components/analytics-dashboard";
+import { Signal } from "@/components/trust";
+import { getTenantHistory } from "@/lib/tenant-history.server";
+import { SavedListingsCompare } from "@/components/saved-listings-compare";
 
 type RoommateSessionProfileData = {
   budget?: number;
@@ -45,13 +48,11 @@ export default async function ProfilePage({
 
   if (!user?.profile) redirect("/auth");
 
-  const [savedListings, applications, roommateSessions, agreementDrafts, reviewsReceived] =
+  const [savedListings, applications, roommateSessions, agreementDrafts, reviewsReceived, history] =
     await Promise.all([
-      prisma.savedListing.findMany({
-        where: { profileId: user.profile.id },
-        include: { listing: true },
-        orderBy: { createdAt: "desc" },
-      }),
+      // Only the count is used here now — the detailed comparison table
+      // (rent, Trust Score, Match %, distance) fetches its own data client-side.
+      prisma.savedListing.count({ where: { profileId: user.profile.id } }),
       prisma.application.findMany({
         where: { profileId: user.profile.id },
         include: { listing: true },
@@ -73,6 +74,7 @@ export default async function ProfilePage({
         include: { application: { include: { listing: { select: { title: true } } } } },
         orderBy: { createdAt: "desc" },
       }),
+      getTenantHistory(user.profile.id),
     ]);
 
   const profile = user.profile;
@@ -124,7 +126,7 @@ export default async function ProfilePage({
           {[
             ["Email", session.user.email],
             ["Account type", profile.accountType || "—"],
-            ["Saved listings", savedListings.length],
+            ["Saved listings", savedListings],
             ["Applications", applications.length],
           ].map(([label, value]) => (
             <div
@@ -157,32 +159,35 @@ export default async function ProfilePage({
         </section>
       )}
 
-      {/* Saved Listings */}
-      <section className="mt-12">
-        <h2 className="text-2xl mb-6">Saved listings ({savedListings.length})</h2>
-        {savedListings.length === 0 ? (
-          <Empty message="No saved listings yet." cta="Browse listings" href="/" />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {savedListings.map((saved) => (
-              <div key={saved.id} className="rounded-2xl border border-border bg-[var(--card)] p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <Link href={`/listings/${saved.listing.id}`} className="flex-1 hover:underline">
-                    <h3 className="font-medium">{saved.listing.title}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{saved.listing.area}</p>
-                    <p className="mt-2 font-mono text-sm">
-                      ৳ {(saved.listing.rent || 0).toLocaleString()} / month
-                    </p>
-                  </Link>
-                  <DeleteButton id={saved.id} type="savedListing" />
-                </div>
-                <p className="mt-3 font-mono text-[11px] text-muted-foreground">
-                  Saved {new Date(saved.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-            ))}
+      {/* History (tenants only) */}
+      {profile.accountType === "tenant" && (
+        <section className="mt-12">
+          <h2 className="text-2xl mb-1">Your history</h2>
+          <p className="mb-6 text-xs text-muted-foreground">
+            A transparent, browsable version of what your Trust Score already uses internally.
+          </p>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <Signal label="Confirmed tenancies" value={`${history.confirmedTenancyCount}`} />
+            <Signal
+              label="On-time payment rate"
+              value={
+                history.onTimePaymentRate != null ? `${history.onTimePaymentRate}%` : "No data yet"
+              }
+            />
+            <Signal label="Disputes resolved" value={`${history.resolvedDisputeCount}`} />
+            <Signal label="Disputes on record" value={`${history.disputeCount}`} />
           </div>
-        )}
+        </section>
+      )}
+
+      {/* Saved Listings / Shortlist */}
+      <section className="mt-12">
+        <h2 className="text-2xl mb-1">Saved listings ({savedListings})</h2>
+        <p className="mb-6 text-xs text-muted-foreground">
+          Compare your shortlist side by side — rent, landlord Trust Score, Match %, and distance to
+          a landmark of your choice.
+        </p>
+        <SavedListingsCompare />
       </section>
 
       {/* Applications */}
