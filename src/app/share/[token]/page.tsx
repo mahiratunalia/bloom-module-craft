@@ -86,7 +86,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
         </div>
 
         <p className="mt-10 border-l-2 border-border pl-4 text-xs text-muted-foreground">
-          This is a read-only view shared via ঠিকানা. Link expires{" "}
+          This is a read-only view shared via rentFindr. Link expires{" "}
           {formatDate(link.expiresAt.toISOString())}.
         </p>
       </div>
@@ -164,7 +164,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
       </ul>
 
       <p className="mt-10 border-l-2 border-border pl-4 text-xs text-muted-foreground">
-        This is a read-only view shared via ঠিকানা. Link expires{" "}
+        This is a read-only view shared via rentFindr. Link expires{" "}
         {formatDate(link.expiresAt.toISOString())}.
       </p>
     </div>

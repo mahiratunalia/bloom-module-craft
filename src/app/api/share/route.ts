@@ -62,11 +62,11 @@ export async function POST(request: NextRequest) {
       parsed.data.type === "agreement" ? "rental agreement" : "roommate matching session";
     await sendEmail({
       to: parsed.data.recipientEmail,
-      subject: `${user.profile.displayName} shared a ${label} with you — ঠিকানা`,
+      subject: `${user.profile.displayName} shared a ${label} with you — rentFindr`,
       html: `<p>Hi${parsed.data.recipientName ? ` ${parsed.data.recipientName}` : ""},</p>
-<p><strong>${user.profile.displayName}</strong> has shared a ${label} with you on ঠিকানা.</p>
+<p><strong>${user.profile.displayName}</strong> has shared a ${label} with you on rentFindr.</p>
 <p><a href="${shareUrl}">View it here</a> — this link expires in 7 days.</p>
-<p>— ঠিকানা</p>`,
+<p>— rentFindr</p>`,
     });
   }
 

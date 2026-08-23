@@ -6,7 +6,7 @@ import { Providers } from "./providers";
 import "@/styles.css";
 
 export const metadata: Metadata = {
-  title: "ঠিকানা — find your somewhere",
+  title: "rentFindr — find your somewhere",
   description:
     "Verified listings, trust signals, ranked applications and evidence-first rental agreements for Bangladesh.",
 };

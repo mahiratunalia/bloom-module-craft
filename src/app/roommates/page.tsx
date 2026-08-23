@@ -351,7 +351,7 @@ export default function RoommatesPage() {
                       .join("; ");
                   return row;
                 });
-                downloadCsv(`Thikana-roommates-${label || "session"}.csv`, rows);
+                downloadCsv(`rentFindr-roommates-${label || "session"}.csv`, rows);
               }}
               onDownloadPdf={(fields, fmt) => {
                 const enabled = new Set(fields.filter((f) => f.enabled).map((f) => f.key));
@@ -376,7 +376,7 @@ export default function RoommatesPage() {
                   return row;
                 });
                 downloadSimplePdf(
-                  `Thikana-roommates-${label || "session"}.pdf`,
+                  `rentFindr-roommates-${label || "session"}.pdf`,
                   label || "Roommate Matching Session",
                   rows,
                 );
@@ -480,7 +480,7 @@ export default function RoommatesPage() {
                       {expandedId === candidate.id ? "Hide profile" : "Profile"}
                     </button>
                     <a
-                      href={`mailto:${candidate.email}?subject=${encodeURIComponent("Roommate match on ঠিকানা")}&body=${encodeURIComponent(`Hi ${candidate.name}, we matched at ${result.total}% compatible on ঠিকানা. Want to both apply to the same shared listing?`)}`}
+                      href={`mailto:${candidate.email}?subject=${encodeURIComponent("Roommate match on rentFindr")}&body=${encodeURIComponent(`Hi ${candidate.name}, we matched at ${result.total}% compatible on rentFindr. Want to both apply to the same shared listing?`)}`}
                       className="flex-1 rounded-full border border-border px-3 py-2 text-center text-xs hover:bg-secondary"
                     >
                       Message

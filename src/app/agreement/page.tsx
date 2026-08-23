@@ -309,7 +309,7 @@ function AgreementPage() {
   }
 
   function handleDownloadCsv() {
-    downloadCsv(`Thikana-agreement-${reference.replace(/\//g, "-")}.csv`, [buildRow()]);
+    downloadCsv(`rentFindr-agreement-${reference.replace(/\//g, "-")}.csv`, [buildRow()]);
   }
 
   function handleDownloadPdf() {
