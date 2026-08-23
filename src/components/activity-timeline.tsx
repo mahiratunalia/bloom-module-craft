@@ -12,6 +12,9 @@ const typeGlyph: Record<string, string> = {
   agreement_fully_executed: "✓",
   payment_logged: "৳",
   payment_failed: "!",
+  dispute_filed: "⚑",
+  dispute_resolved: "✓",
+  message_flagged: "✉",
 };
 
 export function ActivityTimeline({ events }: { events: ActivityEventItem[] }) {

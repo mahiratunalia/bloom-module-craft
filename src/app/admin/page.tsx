@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { DISPUTE_TYPE_LABEL as disputeTypeLabel } from "@/lib/disputes";
 
 type Verification = {
   id: string;
@@ -36,6 +37,16 @@ type TenantVerification = {
   };
 };
 
+type AdminDispute = {
+  id: string;
+  type: string;
+  status: "open" | "resolved";
+  createdAt: string;
+  filedByRole: string;
+  filedByName: string;
+  listingTitle: string;
+};
+
 type AdminInvite = {
   id: string;
   code: string;
@@ -58,6 +69,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
 
+  const [disputes, setDisputes] = useState<AdminDispute[]>([]);
   const [invites, setInvites] = useState<AdminInvite[]>([]);
   const [generating, setGenerating] = useState(false);
   const [newInviteUrl, setNewInviteUrl] = useState<string | null>(null);
@@ -66,14 +78,16 @@ export default function AdminPage() {
   async function load() {
     setLoading(true);
     try {
-      const [landlordRes, tenantRes, invitesRes] = await Promise.all([
+      const [landlordRes, tenantRes, invitesRes, disputesRes] = await Promise.all([
         fetch("/api/admin/verifications"),
         fetch("/api/admin/tenant-verifications"),
         fetch("/api/admin/invites"),
+        fetch("/api/disputes"),
       ]);
       if (landlordRes.ok) setVerifications(await landlordRes.json());
       if (tenantRes.ok) setTenantVerifications(await tenantRes.json());
       if (invitesRes.ok) setInvites(await invitesRes.json());
+      if (disputesRes.ok) setDisputes(await disputesRes.json());
     } finally {
       setLoading(false);
     }
@@ -206,6 +220,56 @@ export default function AdminPage() {
       </header>
 
       {error && <p className="mt-6 text-sm text-destructive">{error}</p>}
+
+      <section className="mt-10">
+        <div className="flex flex-wrap items-baseline justify-between gap-4">
+          <h2 className="text-2xl">Disputes</h2>
+          {disputes.filter((d) => d.status === "open").length > 0 && (
+            <span className="border border-accent/50 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-accent">
+              {disputes.filter((d) => d.status === "open").length} open
+            </span>
+          )}
+        </div>
+        {disputes.length === 0 ? (
+          <p className="mt-4 rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            No disputes filed yet.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {disputes.map((d) => (
+              <li key={d.id}>
+                <Link
+                  href={`/disputes/${d.id}`}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-[var(--card)] p-5 transition-colors hover:border-foreground"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {disputeTypeLabel[d.type] ?? d.type}
+                      </span>
+                      <span
+                        className={`border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${
+                          d.status === "open"
+                            ? "border-accent/50 text-accent"
+                            : "border-primary/40 text-primary"
+                        }`}
+                      >
+                        {d.status}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {d.listingTitle} · filed by {d.filedByName} ({d.filedByRole})
+                    </p>
+                  </div>
+                  <span className="font-mono text-[11px] text-muted-foreground">
+                    {new Date(d.createdAt).toLocaleDateString()}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="mt-10 rounded-2xl border border-border bg-[var(--card)] p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">

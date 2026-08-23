@@ -895,6 +895,18 @@ export default function LandlordDeskPage() {
                         >
                           Maintenance →
                         </Link>
+                        <Link
+                          href={`/messages/${a.id}`}
+                          className="text-center text-xs underline underline-offset-4"
+                        >
+                          Message →
+                        </Link>
+                        <Link
+                          href="/disputes"
+                          className="text-center text-xs underline underline-offset-4"
+                        >
+                          File a dispute →
+                        </Link>
                         <button
                           type="button"
                           disabled={actingOn === a.id}
@@ -915,7 +927,23 @@ export default function LandlordDeskPage() {
                       </div>
                     )}
                     {a.status === "completed" && (
-                      <ReviewPanel applicationId={a.id} viewerIsTenant={false} />
+                      <>
+                        <div className="flex flex-col items-center gap-1">
+                          <Link
+                            href={`/messages/${a.id}`}
+                            className="text-center text-xs underline underline-offset-4"
+                          >
+                            Message →
+                          </Link>
+                          <Link
+                            href="/disputes"
+                            className="text-center text-xs underline underline-offset-4"
+                          >
+                            File a dispute →
+                          </Link>
+                        </div>
+                        <ReviewPanel applicationId={a.id} viewerIsTenant={false} />
+                      </>
                     )}
                   </div>
                   {a.status === "accepted" && openTimelineId === a.profile.id && (

@@ -226,6 +226,15 @@ export default async function ProfilePage({
                       <Link href="/maintenance" className="text-sm underline underline-offset-4">
                         Maintenance →
                       </Link>
+                      <Link
+                        href={`/messages/${app.id}`}
+                        className="text-sm underline underline-offset-4"
+                      >
+                        Message →
+                      </Link>
+                      <Link href="/disputes" className="text-sm underline underline-offset-4">
+                        File a dispute →
+                      </Link>
                     </div>
                     <PayRentForm listingId={app.listingId} rent={app.listing.rent} />
                     <div className="mt-5 border-t border-border pt-5">
@@ -235,7 +244,20 @@ export default async function ProfilePage({
                   </>
                 )}
                 {app.status === "completed" && (
-                  <ReviewPanel applicationId={app.id} viewerIsTenant={true} />
+                  <>
+                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
+                      <Link
+                        href={`/messages/${app.id}`}
+                        className="text-sm underline underline-offset-4"
+                      >
+                        Message →
+                      </Link>
+                      <Link href="/disputes" className="text-sm underline underline-offset-4">
+                        File a dispute →
+                      </Link>
+                    </div>
+                    <ReviewPanel applicationId={app.id} viewerIsTenant={true} />
+                  </>
                 )}
               </div>
             ))}
