@@ -40,6 +40,18 @@ enum MaintenanceStatus {
   resolved
 }
 
+enum DisputeType {
+  unlawful_eviction
+  unpaid_deposit
+  property_damage
+  other
+}
+
+enum DisputeStatus {
+  open
+  resolved
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -74,6 +86,8 @@ model Profile {
   adminInvitesCreated  AdminInvite[]
   reviewsWritten       Review[]
   activityEvents       ActivityEvent[]
+  disputesFiled        Dispute[]
+  messagesSent         Message[]
 }
 
 model Listing {
@@ -123,19 +137,28 @@ model Application {
   listing   Listing           @relation(fields: [listingId], references: [id], onDelete: Cascade)
   reviews   Review[]
   maintenanceRequests MaintenanceRequest[]
+  disputes  Dispute[]
+  messages  Message[]
 
   @@unique([profileId, listingId])
 }
 
+// `rating` stays the derived 1-5 overall (rounded average of categoryRatings)
+// so the existing Trust Score computation in analytics.server.ts, which
+// reads `rating` directly, needed no changes. `categoryRatings` is nullable
+// because reviews submitted before category breakdowns existed only have
+// the overall number — never backfilled, same "frozen snapshot" pattern as
+// Dispute.evidenceJson.
 model Review {
-  id             String      @id @default(cuid())
-  applicationId  String
-  raterProfileId String
-  rating         Int
-  comment        String?
-  createdAt      DateTime    @default(now())
-  application    Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  raterProfile   Profile     @relation(fields: [raterProfileId], references: [id], onDelete: Cascade)
+  id              String      @id @default(cuid())
+  applicationId   String
+  raterProfileId  String
+  rating          Int
+  comment         String?
+  categoryRatings Json?
+  createdAt       DateTime    @default(now())
+  application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  raterProfile    Profile     @relation(fields: [raterProfileId], references: [id], onDelete: Cascade)
 
   @@unique([applicationId, raterProfileId])
 }
@@ -152,6 +175,56 @@ model MaintenanceRequest {
   inProgressAt   DateTime?
   resolvedAt     DateTime?
   application    Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+// Smart Evidence Resolution: filing snapshots the tenancy's evidence (agreement,
+// payments, maintenance timeline, activity log) into evidenceJson at the moment
+// of filing, rather than re-deriving it live later — matching the tamper-evident,
+// point-in-time nature of the rest of the record. aiSummary/aiInconsistencies/
+// aiSuggestedSplit are Gemini's non-binding read of that snapshot; only the
+// admin's own `resolution` text is the actual, binding outcome.
+model Dispute {
+  id                String        @id @default(cuid())
+  applicationId     String
+  filedByProfileId  String
+  filedByRole       String
+  type              DisputeType
+  description       String        @db.Text
+  status            DisputeStatus @default(open)
+  evidenceJson      Json
+  aiSummary         String?       @db.Text
+  aiInconsistencies Json?
+  aiSuggestedSplit  String?       @db.Text
+  aiSource          String?
+  resolution        String?       @db.Text
+  resolvedByUserId  String?
+  createdAt         DateTime      @default(now())
+  resolvedAt        DateTime?
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  filedBy     Profile     @relation(fields: [filedByProfileId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([status])
+}
+
+// In-Platform Messaging: threaded per-tenancy (not an open-ended inbox), the
+// same tamper-evident-timeline premise as ActivityEvent — flagged messages
+// get mirrored into the timeline and later feed the Dispute evidence bundle.
+model Message {
+  id              String   @id @default(cuid())
+  applicationId   String
+  senderProfileId String
+  senderRole      String
+  body            String   @db.Text
+  flagged         Boolean  @default(false)
+  flagReason      String?  @db.Text
+  createdAt       DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  sender      Profile     @relation(fields: [senderProfileId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
 }
 
 model RoommatePreference {
