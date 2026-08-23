@@ -63,11 +63,6 @@ export default function MessagesPage() {
         <h1 className="mt-3 font-display text-4xl font-bold uppercase tracking-tight sm:text-5xl">
           Messages
         </h1>
-        <p className="mt-4 max-w-xl text-sm text-muted-foreground">
-          One thread per tenancy — not an open inbox. Every message is retained in the
-          tenancy&apos;s activity record, and anything that looks like a rent change, move-out
-          notice, or payment promise is automatically flagged for later evidence.
-        </p>
       </header>
 
       <section className="mt-10">

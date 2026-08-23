@@ -155,7 +155,7 @@ export function downloadSimplePdf(filename: string, title: string, rows: Record<
   doc.setFont("courier", "normal");
   doc.setFontSize(9);
   doc.setTextColor(110);
-  doc.text(`BasaKhuji · exported ${new Date().toLocaleDateString()}`, MARGIN, y);
+  doc.text(`Thikana · exported ${new Date().toLocaleDateString()}`, MARGIN, y);
   y += 22;
   doc.setDrawColor(160);
   doc.line(MARGIN, y, 539.28 - MARGIN, y);

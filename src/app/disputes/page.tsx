@@ -132,11 +132,6 @@ function DisputesView({ isLandlord }: { isLandlord: boolean }) {
         <h1 className="mt-3 font-display text-4xl font-bold uppercase tracking-tight sm:text-5xl">
           Disputes
         </h1>
-        <p className="mt-4 max-w-2xl text-sm text-muted-foreground">
-          Filing bundles the signed agreement, payment history, and maintenance timeline for this
-          tenancy automatically — no manual document-hunting. An admin reviews the bundle and issues
-          the final resolution.
-        </p>
       </header>
 
       <section className="mt-10">

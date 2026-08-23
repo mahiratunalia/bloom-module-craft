@@ -6,7 +6,7 @@ import { Providers } from "./providers";
 import "@/styles.css";
 
 export const metadata: Metadata = {
-  title: "BasaKhuji — Verified Rentals with an Evidence Trail",
+  title: "ঠিকানা — find your somewhere",
   description:
     "Verified listings, trust signals, ranked applications and evidence-first rental agreements for Bangladesh.",
 };
