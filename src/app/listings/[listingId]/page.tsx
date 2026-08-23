@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { getLandlordSummary } from "@/lib/landlord-summary.server";
+import { getPropertyHistory } from "@/lib/property-history.server";
 import { ListingDetail } from "./listing-detail";
 
 export default async function ListingDetailPage({
@@ -14,10 +15,14 @@ export default async function ListingDetailPage({
   const listing = await prisma.listing.findUnique({ where: { id: listingId } });
   if (!listing) notFound();
 
-  const owner = await getLandlordSummary(listing.landlordId);
+  const [owner, history] = await Promise.all([
+    getLandlordSummary(listing.landlordId),
+    getPropertyHistory(listing.id),
+  ]);
 
   return (
     <ListingDetail
+      history={history}
       listing={{
         id: listing.id,
         title: listing.title,

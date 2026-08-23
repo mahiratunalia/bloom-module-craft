@@ -31,6 +31,13 @@ type MyListing = {
 type ApplicationStatus =
   "draft" | "submitted" | "shortlisted" | "accepted" | "declined" | "completed";
 
+type ApplicantHistory = {
+  confirmedTenancyCount: number;
+  onTimePaymentRate: number | null;
+  disputeCount: number;
+  resolvedDisputeCount: number;
+};
+
 type RealApplication = {
   id: string;
   note: string | null;
@@ -42,6 +49,7 @@ type RealApplication = {
     roommatePreference: RoommateProfile | null;
     tenantVerification: { status: "pending" | "verified" | "rejected" } | null;
   };
+  history: ApplicantHistory | null;
 };
 
 const roomTypeOptions: RoomType[] = ["Single room", "Shared mess", "Studio", "Full flat"];
@@ -797,9 +805,8 @@ export default function LandlordDeskPage() {
         ) : (
           <>
             <p className="mt-4 max-w-2xl text-xs text-muted-foreground">
-              Ranked by real identity verification status first, application date as tiebreak.
-              Payment history, dispute record and Trust Score will join the ranking once those
-              features exist — they aren&apos;t tracked yet.
+              Ranked by real identity verification status first, application date as tiebreak. Each
+              applicant&apos;s history panel below shows their real payment and dispute record.
             </p>
             <ol className="mt-4 space-y-4">
               {rankedApplications.map((a, i) => (
@@ -830,6 +837,20 @@ export default function LandlordDeskPage() {
                       <p className="mt-3 text-xs text-muted-foreground italic">
                         &ldquo;{a.note}&rdquo;
                       </p>
+                    )}
+                    {a.history && (
+                      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-border pt-3 font-mono text-[11px] text-muted-foreground">
+                        <span>{a.history.confirmedTenancyCount} confirmed tenancies</span>
+                        <span>
+                          {a.history.onTimePaymentRate != null
+                            ? `${a.history.onTimePaymentRate}% on-time payments`
+                            : "No payment history"}
+                        </span>
+                        <span>
+                          {a.history.resolvedDisputeCount}/{a.history.disputeCount} disputes
+                          resolved
+                        </span>
+                      </div>
                     )}
                   </div>
                   <div>

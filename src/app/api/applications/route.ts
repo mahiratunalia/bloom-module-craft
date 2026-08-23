@@ -3,6 +3,7 @@ import { getToken } from "next-auth/jwt";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getTenantHistorySummaries } from "@/lib/tenant-history.server";
 
 const schema = z.object({
   listingId: z.string(),
@@ -35,7 +36,13 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  return NextResponse.json(applications);
+  const historyByProfile = await getTenantHistorySummaries(applications.map((a) => a.profileId));
+  const withHistory = applications.map((a) => ({
+    ...a,
+    history: historyByProfile.get(a.profileId) ?? null,
+  }));
+
+  return NextResponse.json(withHistory);
 }
 
 export async function POST(request: NextRequest) {
