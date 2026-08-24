@@ -4,13 +4,15 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 
-import { Signal } from "@/components/trust";
+import { Signal, VerificationProgressBar } from "@/components/trust";
 import { ReviewPanel } from "@/components/review-panel";
 import { MoveOutPanel } from "@/components/move-out-panel";
 import { ImprovementCostLog } from "@/components/improvement-cost-log";
 import { ActivityTimeline, type ActivityEventItem } from "@/components/activity-timeline";
 import { LandlordAnalyticsSection } from "@/components/analytics-dashboard";
 import { LandlordLeaseCalendar } from "@/components/landlord-lease-calendar";
+import { landlordVerificationProgress } from "@/lib/verification-progress";
+import { formatLastActive, type TrustSignals } from "@/lib/trust-signals";
 import {
   bdt,
   compatibility,
@@ -19,6 +21,30 @@ import {
   type RoomType,
   type RoommateProfile,
 } from "@/data/module1";
+
+type LandlordDocument = {
+  id: string;
+  type: "utility_bill" | "sublet_agreement";
+  label: string;
+  fileUrl: string;
+  createdAt: string;
+};
+
+const documentTypeLabel: Record<LandlordDocument["type"], string> = {
+  utility_bill: "Utility bill",
+  sublet_agreement: "Sub-let lease agreement",
+};
+
+const MAX_DOC_BYTES = 1_500_000;
+
+function fileToBase64Doc(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("Could not read file."));
+    reader.readAsDataURL(file);
+  });
+}
 
 type MyListing = {
   id: string;
@@ -133,6 +159,62 @@ export default function LandlordDeskPage() {
     "pending" | "verified" | "rejected" | null
   >(null);
   const [verificationNote, setVerificationNote] = useState<string | null>(null);
+  const [verificationDocs, setVerificationDocs] = useState<{
+    nidPhotoUrl: string | null;
+    ownershipProofUrl: string | null;
+    selfiePhotoUrl: string | null;
+    status: "pending" | "verified" | "rejected";
+  } | null>(null);
+  const [trustSignals, setTrustSignals] = useState<TrustSignals | null>(null);
+
+  const [documents, setDocuments] = useState<LandlordDocument[]>([]);
+  const [docLabel, setDocLabel] = useState("");
+  const [docType, setDocType] = useState<LandlordDocument["type"]>("utility_bill");
+  const [docUploading, setDocUploading] = useState(false);
+  const [docError, setDocError] = useState<string | null>(null);
+
+  async function loadDocuments() {
+    try {
+      const res = await fetch("/api/landlord/documents");
+      if (res.ok) setDocuments(await res.json());
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function uploadDocument(file: File | null) {
+    if (!file || !docLabel.trim()) {
+      setDocError("Give the document a label and choose a file first.");
+      return;
+    }
+    if (file.size > MAX_DOC_BYTES) {
+      setDocError(`File must be under ${Math.round(MAX_DOC_BYTES / 1_000_000)}MB.`);
+      return;
+    }
+    setDocUploading(true);
+    setDocError(null);
+    try {
+      const fileUrl = await fileToBase64Doc(file);
+      const res = await fetch("/api/landlord/documents", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: docType, label: docLabel.trim(), fileUrl }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Could not upload document.");
+      setDocLabel("");
+      await loadDocuments();
+    } catch (err) {
+      setDocError(err instanceof Error ? err.message : "Could not upload document.");
+    } finally {
+      setDocUploading(false);
+    }
+  }
+
+  async function deleteDocument(id: string) {
+    setDocuments((docs) => docs.filter((d) => d.id !== id));
+    await fetch(`/api/landlord/documents/${id}`, { method: "DELETE" }).catch(() => {});
+  }
 
   const [reviewSummary, setReviewSummary] = useState<{ average: number | null; count: number }>({
     average: null,
@@ -191,9 +273,22 @@ export default function LandlordDeskPage() {
           if (d) {
             setVerificationStatus(d.status);
             setVerificationNote(d.reviewNote);
+            setVerificationDocs({
+              nidPhotoUrl: d.nidPhotoUrl,
+              ownershipProofUrl: d.ownershipProofUrl,
+              selfiePhotoUrl: d.selfiePhotoUrl,
+              status: d.status,
+            });
           }
         })
         .catch(() => {});
+      fetch("/api/landlord/trust-signals")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d) setTrustSignals(d);
+        })
+        .catch(() => {});
+      loadDocuments();
       fetch("/api/reviews/received")
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
@@ -203,7 +298,6 @@ export default function LandlordDeskPage() {
     } else if (status !== "loading") {
       setListingsLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   async function loadApplications(listingId: string) {
@@ -227,7 +321,6 @@ export default function LandlordDeskPage() {
     // the previous listing's stale list.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadApplications(selected);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
 
   const compatPairs = useMemo(() => {
@@ -474,6 +567,114 @@ export default function LandlordDeskPage() {
           </div>
         )}
       </header>
+
+      <section className="mt-12">
+        <h2 className="text-2xl mb-1">Trust profile</h2>
+        <p className="mb-6 text-xs text-muted-foreground">
+          What tenants see about you at a glance — verification progress, trust signals, and
+          documents you&apos;ve made available for inspection.
+        </p>
+        <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+          <div className="rounded-2xl border border-border bg-[var(--card)] p-6">
+            <VerificationProgressBar progress={landlordVerificationProgress(verificationDocs)} />
+          </div>
+          <div className="grid grid-cols-2 gap-5 rounded-2xl border border-border bg-[var(--card)] p-6 sm:grid-cols-4">
+            <Signal
+              label="Completed rentals"
+              value={trustSignals ? `${trustSignals.completedRentals}` : "…"}
+            />
+            <Signal
+              label="Avg. response time"
+              value={
+                trustSignals
+                  ? trustSignals.avgResponseHours != null
+                    ? `${trustSignals.avgResponseHours}h`
+                    : "No data yet"
+                  : "…"
+              }
+            />
+            <Signal
+              label="Response rate"
+              value={
+                trustSignals
+                  ? trustSignals.responseRate != null
+                    ? `${trustSignals.responseRate}%`
+                    : "No data yet"
+                  : "…"
+              }
+            />
+            <Signal
+              label="Activity"
+              value={trustSignals ? formatLastActive(trustSignals.lastActiveAt) : "…"}
+            />
+          </div>
+        </div>
+
+        {verificationStatus === "verified" && (
+          <div className="mt-6 rounded-2xl border border-border bg-[var(--card)] p-6">
+            <p className="eyebrow">Documents for tenant inspection</p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Upload utility bills or sub-let lease agreements — verified landlords only. These are
+              shown publicly on your listings, not the NID/ownership docs used for admin review.
+            </p>
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+              <label className="block">
+                <span className="eyebrow">Document type</span>
+                <select
+                  value={docType}
+                  onChange={(e) => setDocType(e.target.value as LandlordDocument["type"])}
+                  className={inputCls}
+                >
+                  <option value="utility_bill">Utility bill</option>
+                  <option value="sublet_agreement">Sub-let lease agreement</option>
+                </select>
+              </label>
+              <label className="block flex-1">
+                <span className="eyebrow">Label</span>
+                <input
+                  value={docLabel}
+                  onChange={(e) => setDocLabel(e.target.value)}
+                  placeholder="e.g. DESCO bill, July 2026"
+                  className={inputCls}
+                />
+              </label>
+              <label className="block">
+                <span className="eyebrow">File</span>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  disabled={docUploading}
+                  onChange={(e) => uploadDocument(e.target.files?.[0] ?? null)}
+                  className="mt-2 text-xs file:mr-3 file:border file:border-border file:bg-transparent file:px-3 file:py-1.5 file:text-xs"
+                />
+              </label>
+            </div>
+            {docError && <p className="mt-3 text-sm text-destructive">{docError}</p>}
+
+            {documents.length > 0 && (
+              <ul className="mt-5 space-y-2 border-t border-border pt-4">
+                {documents.map((d) => (
+                  <li key={d.id} className="flex items-center justify-between gap-3 text-sm">
+                    <span>
+                      {d.label}{" "}
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                        {documentTypeLabel[d.type]}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => deleteDocument(d.id)}
+                      className="font-mono text-xs text-muted-foreground underline-offset-4 hover:text-destructive hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </section>
 
       <section className="mt-12">
         <h2 className="text-2xl">Analytics</h2>

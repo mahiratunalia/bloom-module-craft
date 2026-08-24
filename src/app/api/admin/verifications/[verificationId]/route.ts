@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { verificationApprovedEmail, verificationRejectedEmail } from "@/lib/gmail.server";
 
 const schema = z.object({
   status: z.enum(["verified", "rejected"]),
@@ -27,7 +28,7 @@ export async function PATCH(
 
   const existing = await prisma.landlordVerification.findUnique({
     where: { id: verificationId },
-    include: { profile: true },
+    include: { profile: { include: { user: { select: { email: true, name: true } } } } },
   });
   if (!existing) return NextResponse.json({ error: "Verification not found" }, { status: 404 });
 
@@ -48,6 +49,19 @@ export async function PATCH(
       where: { landlordId: existing.profile.userId, status: "Draft" },
       data: { status: "Active" },
     });
+  }
+
+  const recipientEmail = existing.profile.user.email;
+  const recipientName = existing.profile.user.name ?? existing.profile.displayName;
+  if (parsed.data.status === "verified") {
+    await verificationApprovedEmail(recipientEmail, recipientName, "landlord");
+  } else {
+    await verificationRejectedEmail(
+      recipientEmail,
+      recipientName,
+      "landlord",
+      parsed.data.reviewNote,
+    );
   }
 
   return NextResponse.json(updated);

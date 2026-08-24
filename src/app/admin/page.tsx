@@ -12,6 +12,7 @@ type Verification = {
   propertyAddress: string;
   nidPhotoUrl: string | null;
   ownershipProofUrl: string | null;
+  selfiePhotoUrl: string | null;
   status: "pending" | "verified" | "rejected";
   reviewNote: string | null;
   submittedAt: string;
@@ -394,7 +395,7 @@ export default function AdminPage() {
                   </div>
                 </dl>
 
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <div className="mt-5 grid gap-4 sm:grid-cols-3">
                   <div>
                     <p className="eyebrow">NID photo</p>
                     {v.nidPhotoUrl && (
@@ -411,6 +412,16 @@ export default function AdminPage() {
                       <img
                         src={v.ownershipProofUrl}
                         alt="Submitted ownership proof"
+                        className="mt-2 max-h-48 w-full rounded-xl border border-border object-contain"
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <p className="eyebrow">Selfie with NID</p>
+                    {v.selfiePhotoUrl && (
+                      <img
+                        src={v.selfiePhotoUrl}
+                        alt="Submitted selfie with NID"
                         className="mt-2 max-h-48 w-full rounded-xl border border-border object-contain"
                       />
                     )}

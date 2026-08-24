@@ -14,8 +14,12 @@ export async function GET(request: NextRequest) {
     include: { profile: { include: { landlordVerification: true } } },
   });
 
+  const v = user?.profile?.landlordVerification;
   return NextResponse.json({
-    status: user?.profile?.landlordVerification?.status ?? null,
-    reviewNote: user?.profile?.landlordVerification?.reviewNote ?? null,
+    status: v?.status ?? null,
+    reviewNote: v?.reviewNote ?? null,
+    nidPhotoUrl: v?.nidPhotoUrl ?? null,
+    ownershipProofUrl: v?.ownershipProofUrl ?? null,
+    selfiePhotoUrl: v?.selfiePhotoUrl ?? null,
   });
 }

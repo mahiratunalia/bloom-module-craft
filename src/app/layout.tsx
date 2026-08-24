@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { SiteHeader } from "@/components/site-chrome";
+import { ActivityPing } from "@/components/activity-ping";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 import { Providers } from "./providers";
 import "@/styles.css";
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <Providers>
+          <ActivityPing />
           <div className="flex min-h-screen flex-col">
             <SiteHeader />
             <main className="flex-1">{children}</main>

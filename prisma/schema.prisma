@@ -96,6 +96,7 @@ model Profile {
   userId               String                  @unique
   displayName          String
   accountType          AccountType             @default(tenant)
+  lastActiveAt         DateTime?
   createdAt            DateTime                @default(now())
   updatedAt            DateTime                @updatedAt
   user                 User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -107,6 +108,7 @@ model Profile {
   agreementDrafts      AgreementDraft[]
   landlordVerification LandlordVerification?
   tenantVerification   TenantVerification?
+  landlordDocuments    LandlordDocument[]
   adminInvitesCreated  AdminInvite[]
   reviewsWritten       Review[]
   activityEvents       ActivityEvent[]
@@ -447,11 +449,33 @@ model LandlordVerification {
   propertyAddress   String
   nidPhotoUrl       String?            @db.Text
   ownershipProofUrl String?            @db.Text
+  selfiePhotoUrl    String?            @db.Text
   status            VerificationStatus @default(pending)
   reviewNote        String?
   submittedAt       DateTime           @default(now())
   reviewedAt        DateTime?
   profile           Profile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+enum LandlordDocumentType {
+  utility_bill
+  sublet_agreement
+}
+
+// Post-verification documents a verified landlord uploads for prospective
+// tenants to inspect before applying (utility bills, sub-let lease
+// agreements) — distinct from LandlordVerification's admin-only NID/ownership
+// docs, which are never shown to tenants.
+model LandlordDocument {
+  id        String               @id @default(cuid())
+  profileId String
+  type      LandlordDocumentType
+  label     String
+  fileUrl   String               @db.Text
+  createdAt DateTime             @default(now())
+  profile   Profile              @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
 }
 
 model TenantVerification {

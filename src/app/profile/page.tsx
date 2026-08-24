@@ -13,8 +13,11 @@ import { MoveOutPanel } from "@/components/move-out-panel";
 import { ImprovementCostLog } from "@/components/improvement-cost-log";
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { TenantAnalyticsSection } from "@/components/analytics-dashboard";
-import { Signal } from "@/components/trust";
+import { Signal, VerificationProgressBar } from "@/components/trust";
 import { getTenantHistory } from "@/lib/tenant-history.server";
+import { getTenantTrustSignals } from "@/lib/trust-signals.server";
+import { formatLastActive } from "@/lib/trust-signals";
+import { tenantVerificationProgress } from "@/lib/verification-progress";
 import { SavedListingsCompare } from "@/components/saved-listings-compare";
 import { getTenantLeaseTimelines } from "@/lib/lease-timeline.server";
 import { LeaseTimelineBar } from "@/components/lease-timeline-bar";
@@ -90,6 +93,8 @@ export default async function ProfilePage({
     ]);
 
   const profile = user.profile;
+  const trustSignals =
+    profile.accountType === "tenant" ? await getTenantTrustSignals(profile.id) : null;
 
   const acceptedListingIds = applications
     .filter((a) => a.status === "accepted")
@@ -160,6 +165,27 @@ export default async function ProfilePage({
             initialStatus={profile.tenantVerification?.status ?? null}
             initialNote={profile.tenantVerification?.reviewNote ?? null}
           />
+          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+            <div className="rounded-2xl border border-border bg-[var(--card)] p-6">
+              <VerificationProgressBar
+                progress={tenantVerificationProgress(profile.tenantVerification)}
+              />
+            </div>
+            {trustSignals && (
+              <div className="grid grid-cols-2 gap-5 rounded-2xl border border-border bg-[var(--card)] p-6 sm:grid-cols-3">
+                <Signal label="Completed rentals" value={`${trustSignals.completedRentals}`} />
+                <Signal
+                  label="Avg. response time"
+                  value={
+                    trustSignals.avgResponseHours != null
+                      ? `${trustSignals.avgResponseHours}h`
+                      : "No data yet"
+                  }
+                />
+                <Signal label="Activity" value={formatLastActive(trustSignals.lastActiveAt)} />
+              </div>
+            )}
+          </div>
         </section>
       )}
 

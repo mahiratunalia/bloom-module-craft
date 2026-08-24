@@ -23,6 +23,7 @@ const landlordFieldsSchema = z.object({
   propertyAddress: z.string().min(5).max(300),
   nidPhoto: z.string().min(1).max(MAX_PHOTO_CHARS),
   ownershipProof: z.string().min(1).max(MAX_PHOTO_CHARS),
+  selfiePhoto: z.string().min(1).max(MAX_PHOTO_CHARS),
 });
 
 export async function POST(request: Request) {
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Landlord accounts require NID number, phone, property address, and both document photos.",
+            "Landlord accounts require NID number, phone, property address, both document photos, and a selfie with your NID.",
         },
         { status: 400 },
       );
@@ -113,6 +114,7 @@ export async function POST(request: Request) {
                       propertyAddress: landlordFields.propertyAddress,
                       nidPhotoUrl: landlordFields.nidPhoto,
                       ownershipProofUrl: landlordFields.ownershipProof,
+                      selfiePhotoUrl: landlordFields.selfiePhoto,
                       status: "pending",
                     },
                   },

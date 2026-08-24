@@ -1,4 +1,5 @@
 import { TRUST_WEIGHTS, trustScore, type Landlord, type TrustBreakdown } from "@/data/module1";
+import type { VerificationProgress } from "@/lib/verification-progress";
 
 function toneFor(score: number) {
   if (score >= 85) return "text-trust-high";
@@ -63,6 +64,39 @@ export function VerifiedBadge({ since }: { since?: string }) {
     <span className="inline-flex items-center gap-1.5 border border-primary/40 bg-primary/5 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-primary">
       <span aria-hidden>✓</span> Verified{since ? ` · ${since}` : ""}
     </span>
+  );
+}
+
+/**
+ * Renders the step-by-step verification progress (docs submitted → admin
+ * review) rather than only the binary pending/verified/rejected badge —
+ * surfaced on every profile per the Landlord Verification proposal item.
+ */
+export function VerificationProgressBar({ progress }: { progress: VerificationProgress }) {
+  const tone =
+    progress.status === "verified"
+      ? "text-trust-high"
+      : progress.status === "rejected"
+        ? "text-destructive"
+        : "text-trust-mid";
+  return (
+    <div>
+      <div className="flex items-baseline justify-between">
+        <span className="eyebrow">Verification progress</span>
+        <span className={`font-mono text-xs tabular-nums ${tone}`}>{progress.percent}%</span>
+      </div>
+      <TrustBar value={progress.percent} />
+      <ul className="mt-3 space-y-1.5">
+        {progress.steps.map((s) => (
+          <li key={s.label} className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span aria-hidden className={s.done ? "text-primary" : ""}>
+              {s.done ? "✓" : "○"}
+            </span>
+            {s.label}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

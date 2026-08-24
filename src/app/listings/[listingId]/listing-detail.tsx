@@ -9,8 +9,13 @@ import placeholder2 from "@/assets/listing-2.jpg";
 import placeholder3 from "@/assets/listing-3.jpg";
 import { Signal, VerifiedBadge } from "@/components/trust";
 import { bdt, formatDate } from "@/data/module1";
-import type { LandlordSummary } from "@/lib/landlord-summary.server";
+import type { LandlordPublicProfile } from "@/lib/landlord-summary.server";
 import type { PropertyHistory } from "@/lib/property-history.server";
+
+const documentTypeLabel: Record<string, string> = {
+  utility_bill: "Utility bill",
+  sublet_agreement: "Sub-let lease agreement",
+};
 
 const ListingMap = dynamic(() => import("@/components/listing-map"), { ssr: false });
 
@@ -46,7 +51,7 @@ export function ListingDetail({
   history,
 }: {
   listing: ListingDetailData;
-  owner: LandlordSummary;
+  owner: LandlordPublicProfile;
   history: PropertyHistory;
 }) {
   const [applying, setApplying] = useState(false);
@@ -255,13 +260,46 @@ export function ListingDetail({
             <div className="mt-6 grid grid-cols-2 gap-5">
               <Signal label="Total listings" value={`${owner.totalListings}`} />
               <Signal label="Total applicants" value={`${owner.totalApplicants}`} />
+              <Signal label="Completed rentals" value={`${owner.completedRentals}`} />
+              <Signal
+                label="Avg. response time"
+                value={
+                  owner.avgResponseHours != null ? `${owner.avgResponseHours}h` : "No data yet"
+                }
+              />
               <Signal label="Available from" value={formatDate(listing.availableFrom)} />
+              <Signal label="Activity" value={owner.lastActiveLabel} />
             </div>
             <p className="mt-6 text-xs text-muted-foreground">
               This card shows real, admin-verified identity status. See the History section below
               for this property&apos;s tenancy and dispute record.
             </p>
           </div>
+
+          {owner.documents.length > 0 && (
+            <div className="rounded-2xl border border-border bg-[var(--card)] p-6">
+              <p className="eyebrow">Documents for inspection</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Uploaded by the verified landlord for prospective tenants to review.
+              </p>
+              <ul className="mt-4 space-y-2">
+                {owner.documents.map((d) => (
+                  <li key={d.id}>
+                    <a
+                      href={d.fileUrl}
+                      download={d.label}
+                      className="flex items-center justify-between gap-3 border-b border-border pb-2 text-sm hover:underline"
+                    >
+                      <span>{d.label}</span>
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                        {documentTypeLabel[d.type] ?? d.type}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="space-y-3 rounded-2xl border border-border bg-[var(--card)] p-6">
             <p className="eyebrow">Actions</p>
