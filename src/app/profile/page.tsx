@@ -9,6 +9,8 @@ import { DeleteButton } from "./delete-button";
 import { VerifyIdentity } from "./verify-identity";
 import { ReviewPanel } from "@/components/review-panel";
 import { PayRentForm } from "./pay-rent-form";
+import { MoveOutPanel } from "@/components/move-out-panel";
+import { ImprovementCostLog } from "@/components/improvement-cost-log";
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { TenantAnalyticsSection } from "@/components/analytics-dashboard";
 import { Signal, VerificationProgressBar } from "@/components/trust";
@@ -17,6 +19,8 @@ import { getTenantTrustSignals } from "@/lib/trust-signals.server";
 import { formatLastActive } from "@/lib/trust-signals";
 import { tenantVerificationProgress } from "@/lib/verification-progress";
 import { SavedListingsCompare } from "@/components/saved-listings-compare";
+import { getTenantLeaseTimelines } from "@/lib/lease-timeline.server";
+import { LeaseTimelineBar } from "@/components/lease-timeline-bar";
 
 type RoommateSessionProfileData = {
   budget?: number;
@@ -51,8 +55,15 @@ export default async function ProfilePage({
 
   if (!user?.profile) redirect("/auth");
 
-  const [savedListings, applications, roommateSessions, agreementDrafts, reviewsReceived, history] =
-    await Promise.all([
+  const [
+    savedListings,
+    applications,
+    roommateSessions,
+    agreementDrafts,
+    reviewsReceived,
+    history,
+    leaseTimelines,
+  ] = await Promise.all([
       // Only the count is used here now — the detailed comparison table
       // (rent, Trust Score, Match %, distance) fetches its own data client-side.
       prisma.savedListing.count({ where: { profileId: user.profile.id } }),
@@ -78,6 +89,7 @@ export default async function ProfilePage({
         orderBy: { createdAt: "desc" },
       }),
       getTenantHistory(user.profile.id),
+      getTenantLeaseTimelines(user.profile.id),
     ]);
 
   const profile = user.profile;
@@ -177,6 +189,25 @@ export default async function ProfilePage({
         </section>
       )}
 
+      {/* Lease timeline (tenants only) */}
+      {profile.accountType === "tenant" && leaseTimelines.length > 0 && (
+        <section className="mt-12">
+          <h2 className="text-2xl mb-1">Lease timeline</h2>
+          <p className="mb-6 text-xs text-muted-foreground">
+            Move-in, elapsed tenancy, and the renewal-decision window — the same dates the
+            expiry reminder emails use.
+          </p>
+          <div className="space-y-6">
+            {leaseTimelines.map((t) => (
+              <div key={t.applicationId} className="rounded-2xl border border-border bg-[var(--card)] p-6">
+                <p className="mb-3 text-sm font-medium">{t.listingTitle}</p>
+                <LeaseTimelineBar timeline={t} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Analytics (tenants only) */}
       {profile.accountType === "tenant" && (
         <section className="mt-12">
@@ -268,6 +299,8 @@ export default async function ProfilePage({
                       </Link>
                     </div>
                     <PayRentForm listingId={app.listingId} rent={app.listing.rent} />
+                    <MoveOutPanel applicationId={app.id} viewerIsLandlord={false} />
+                    <ImprovementCostLog applicationId={app.id} viewerIsLandlord={false} />
                     <div className="mt-5 border-t border-border pt-5">
                       <p className="eyebrow mb-4">Activity timeline</p>
                       <ActivityTimeline events={activityByListing.get(app.listingId) ?? []} />

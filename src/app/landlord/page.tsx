@@ -6,8 +6,11 @@ import { useSession } from "next-auth/react";
 
 import { Signal, VerificationProgressBar } from "@/components/trust";
 import { ReviewPanel } from "@/components/review-panel";
+import { MoveOutPanel } from "@/components/move-out-panel";
+import { ImprovementCostLog } from "@/components/improvement-cost-log";
 import { ActivityTimeline, type ActivityEventItem } from "@/components/activity-timeline";
 import { LandlordAnalyticsSection } from "@/components/analytics-dashboard";
+import { LandlordLeaseCalendar } from "@/components/landlord-lease-calendar";
 import { landlordVerificationProgress } from "@/lib/verification-progress";
 import { formatLastActive, type TrustSignals } from "@/lib/trust-signals";
 import {
@@ -679,6 +682,15 @@ export default function LandlordDeskPage() {
       </section>
 
       <section className="mt-16">
+        <h2 className="text-2xl mb-1">Renewal calendar</h2>
+        <p className="mb-6 text-xs text-muted-foreground">
+          Every active, fully-signed tenancy across your portfolio, grouped by the month its
+          renewal-decision window opens.
+        </p>
+        <LandlordLeaseCalendar />
+      </section>
+
+      <section className="mt-16">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h2 className="text-2xl">Listings</h2>
           <button
@@ -1131,14 +1143,6 @@ export default function LandlordDeskPage() {
                         </Link>
                         <button
                           type="button"
-                          disabled={actingOn === a.id}
-                          onClick={() => setApplicationStatus(a.id, "completed")}
-                          className="mt-2 block w-full text-center text-xs text-muted-foreground underline underline-offset-4 disabled:opacity-60"
-                        >
-                          Mark tenancy as ended
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => toggleTimeline(a.profile.id)}
                           className="text-center text-xs text-muted-foreground underline underline-offset-4"
                         >
@@ -1146,6 +1150,8 @@ export default function LandlordDeskPage() {
                             ? "Hide timeline ▴"
                             : "Activity timeline ▾"}
                         </button>
+                        <MoveOutPanel applicationId={a.id} viewerIsLandlord />
+                        <ImprovementCostLog applicationId={a.id} viewerIsLandlord />
                       </div>
                     )}
                     {a.status === "completed" && (

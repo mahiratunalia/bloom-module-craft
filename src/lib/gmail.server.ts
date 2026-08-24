@@ -124,6 +124,67 @@ export function expiryReminderEmail(to: string, tenantName: string, endDate: str
   });
 }
 
+export function moveOutProposedEmail(
+  to: string,
+  tenantName: string,
+  listingTitle: string,
+  endDateLabel: string,
+) {
+  const name = escapeHtml(tenantName);
+  const listing = escapeHtml(listingTitle);
+  const date = escapeHtml(endDateLabel);
+  return sendEmail({
+    to,
+    subject: `Move-out proposed — ${listingTitle}`,
+    html: `<p>Hi ${name},</p><p>Your landlord has proposed ending your tenancy at <strong>${listing}</strong> on <strong>${date}</strong>. Log in to ঠিকানা to acknowledge the date and review your settlement.</p><p>— ঠিকানা</p>`,
+  });
+}
+
+export function settlementFinalizedEmail(
+  to: string,
+  name: string,
+  listingTitle: string,
+  totalRentPaid: number,
+  depositAmount: number,
+  netRefund: number,
+  refundReference: string,
+) {
+  const nameEsc = escapeHtml(name);
+  const listing = escapeHtml(listingTitle);
+  const ref = escapeHtml(refundReference);
+  return sendEmail({
+    to,
+    subject: `Move-out settlement finalized — ${listingTitle}`,
+    html: `<p>Hi ${nameEsc},</p><p>The tenancy at <strong>${listing}</strong> has been settled. Summary:</p><ul><li>Total rent paid: ৳${totalRentPaid.toLocaleString("en-BD")}</li><li>Security deposit: ৳${depositAmount.toLocaleString("en-BD")}</li><li>Net refund: <strong>৳${netRefund.toLocaleString("en-BD")}</strong></li></ul><p>Refund logged (Ref: <strong>${ref}</strong>). Log in to ঠিকানা for the full breakdown, including any itemized deductions.</p><p>— ঠিকানা</p>`,
+  });
+}
+
+export function listingVacantEmail(to: string, landlordName: string, listingTitle: string) {
+  const name = escapeHtml(landlordName);
+  const listing = escapeHtml(listingTitle);
+  return sendEmail({
+    to,
+    subject: `Your listing is vacant — ${listingTitle}`,
+    html: `<p>Hi ${name},</p><p><strong>${listing}</strong> is now vacant following a completed move-out. It's ready to be reactivated for new applicants.</p><p>— ঠিকানা</p>`,
+  });
+}
+
+export function rentDueReminderEmail(
+  to: string,
+  tenantName: string,
+  listingTitle: string,
+  monthLabel: string,
+) {
+  const name = escapeHtml(tenantName);
+  const listing = escapeHtml(listingTitle);
+  const month = escapeHtml(monthLabel);
+  return sendEmail({
+    to,
+    subject: `Rent due soon — ${listingTitle}`,
+    html: `<p>Hi ${name},</p><p>Your rent for <strong>${listing}</strong> for <strong>${month}</strong> is due in 3 days. Log in to ঠিকানা to log your payment.</p><p>— ঠিকানা</p>`,
+  });
+}
+
 export function maintenanceFiledEmail(
   to: string,
   landlordName: string,

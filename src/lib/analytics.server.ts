@@ -348,6 +348,8 @@ async function paymentCompletionPercentile(
 export type LandlordAnalytics = {
   occupancy: { rate: number | null; occupied: number; totalActive: number };
   income: { currentMonthTotal: number; trend: { label: string; total: number }[] };
+  improvementSpend: { currentMonthTotal: number; trend: { label: string; total: number }[] };
+  netYield: { currentMonthTotal: number; trend: { label: string; total: number }[] };
   vacancy: { avgDays: number | null; sampleSize: number };
   maintenance: {
     avgResolutionHours: number | null;
@@ -446,6 +448,36 @@ export async function getLandlordAnalytics(landlordUserId: string): Promise<Land
     trend: labels.map((label, i) => ({ label, total: totals[i]! })),
   };
 
+  // Renovation & Improvement Cost Log: only the landlord's own approved,
+  // out-of-pocket spend counts here. A tenant-fronted cost that gets
+  // deducted from their deposit is already netted correctly in the Move-Out
+  // settlement itself (MoveOut.netRefund) — including it again here would
+  // double-count the same money as a landlord "cost" when it was actually
+  // recouped via a smaller refund, not paid separately.
+  const improvementCosts = listingIds.length
+    ? await prisma.improvementCost.findMany({
+        where: {
+          status: "approved",
+          loggedByRole: "landlord",
+          application: { listing: { landlordId: landlordUserId } },
+        },
+        select: { amount: true, createdAt: true },
+      })
+    : [];
+  const spendTotals = new Array(6).fill(0) as number[];
+  for (const c of improvementCosts) {
+    const idx = monthBucketIndex(c.createdAt, 6);
+    if (idx != null) spendTotals[idx] += c.amount;
+  }
+  const improvementSpend = {
+    currentMonthTotal: spendTotals[5]!,
+    trend: labels.map((label, i) => ({ label, total: spendTotals[i]! })),
+  };
+  const netYield = {
+    currentMonthTotal: income.currentMonthTotal - improvementSpend.currentMonthTotal,
+    trend: labels.map((label, i) => ({ label, total: totals[i]! - spendTotals[i]! })),
+  };
+
   const breakdown = await landlordTrustComponents(landlordUserId, new Date());
   const score = weightedScore(breakdown);
   const trend = await trustTrend((asOf) => landlordTrustComponents(landlordUserId, asOf), 6);
@@ -465,10 +497,21 @@ export async function getLandlordAnalytics(landlordUserId: string): Promise<Land
       `Your average maintenance resolution time is ${maintenance.avgResolutionHours}h, with ${maintenance.withinSlaRate}% of requests resolved within the ${MAINTENANCE_SLA_HOURS}h SLA.`,
     );
   }
+  if (improvementSpend.currentMonthTotal > 0) {
+    const pctOfIncome = income.currentMonthTotal
+      ? Math.round((improvementSpend.currentMonthTotal / income.currentMonthTotal) * 100)
+      : null;
+    insights.push(
+      `You've spent ৳${improvementSpend.currentMonthTotal.toLocaleString("en-BD")} on approved improvements this month` +
+        (pctOfIncome != null ? `, ${pctOfIncome}% of rent logged.` : "."),
+    );
+  }
 
   return {
     occupancy,
     income,
+    improvementSpend,
+    netYield,
     vacancy,
     maintenance,
     deposits,
