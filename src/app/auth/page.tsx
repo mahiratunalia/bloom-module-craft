@@ -40,6 +40,7 @@ function AuthPageInner() {
   const [propertyAddress, setPropertyAddress] = useState("");
   const [nidPhoto, setNidPhoto] = useState<File | null>(null);
   const [ownershipProof, setOwnershipProof] = useState<File | null>(null);
+  const [selfiePhoto, setSelfiePhoto] = useState<File | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -63,10 +64,10 @@ function AuthPageInner() {
         const isAdmin = accountType === "admin";
         if (
           isLandlord &&
-          (!nidNumber || !phone || !propertyAddress || !nidPhoto || !ownershipProof)
+          (!nidNumber || !phone || !propertyAddress || !nidPhoto || !ownershipProof || !selfiePhoto)
         ) {
           throw new Error(
-            "Landlord accounts need NID number, phone, property address, and both document photos for admin verification.",
+            "Landlord accounts need NID number, phone, property address, both document photos, and a selfie with your NID for admin verification.",
           );
         }
         if (isAdmin && !adminCode) {
@@ -85,6 +86,7 @@ function AuthPageInner() {
           payload.propertyAddress = propertyAddress;
           payload.nidPhoto = await fileToBase64(nidPhoto!);
           payload.ownershipProof = await fileToBase64(ownershipProof!);
+          payload.selfiePhoto = await fileToBase64(selfiePhoto!);
         }
         if (isAdmin) {
           payload.requestAdmin = true;
@@ -249,6 +251,22 @@ function AuthPageInner() {
                         <p className="mt-1 text-xs text-primary">✓ {ownershipProof.name}</p>
                       )}
                     </label>
+                    <label className="block">
+                      <span className="eyebrow">Selfie with your NID</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handlePhoto(e.target.files?.[0] ?? null, setSelfiePhoto)}
+                        className="mt-2 w-full text-xs file:mr-3 file:border file:border-border file:bg-transparent file:px-3 file:py-1.5 file:text-xs"
+                      />
+                      {selfiePhoto && (
+                        <p className="mt-1 text-xs text-primary">✓ {selfiePhoto.name}</p>
+                      )}
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        A photo of you holding your NID next to your face, for admin liveness
+                        checks.
+                      </p>
+                    </label>
                   </div>
                 )}
               </>
@@ -287,24 +305,6 @@ function AuthPageInner() {
             <p className="mt-5 border-l-2 border-accent pl-3 text-xs text-muted-foreground">
               {message}
             </p>
-          )}
-
-          {mode === "signin" && process.env.NODE_ENV !== "production" && (
-            <div className="mt-6 rounded-xl border border-dashed border-border p-4 text-xs text-muted-foreground">
-              <p className="eyebrow mb-2">Demo accounts (Module 1)</p>
-              <ul className="space-y-1 font-mono">
-                <li>Admin — admin@baskhuji.local / admin123</li>
-                <li>Landlord — landlord@baskhuji.local / landlord123</li>
-                <li>Landlord (roommate compatibility) — shirin@baskhuji.local / landlord123</li>
-                <li>Tenant — tenant@baskhuji.local / tenant123</li>
-              </ul>
-              <p className="mt-2">
-                Admin accounts review verifications and aren&apos;t self-serve — sign in with the
-                account above rather than creating one. Shirin&apos;s shared-mess listing has 3 real
-                applicants with saved roommate preferences — open it from her landlord desk to see
-                computed compatibility scores between applicants.
-              </p>
-            </div>
           )}
 
           <p className="mt-8 text-xs text-muted-foreground">

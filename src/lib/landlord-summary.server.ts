@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/data/module1";
+import { getLandlordTrustSignals } from "@/lib/trust-signals.server";
+import { formatLastActive } from "@/lib/trust-signals";
 
 export type LandlordSummary = {
   id: string;
@@ -83,4 +85,67 @@ export async function getLandlordSummaries(
 export async function getLandlordSummary(landlordId: string): Promise<LandlordSummary> {
   const map = await getLandlordSummaries([landlordId]);
   return map.get(landlordId) ?? unknownSummary(landlordId);
+}
+
+export type LandlordDocumentItem = {
+  id: string;
+  type: "utility_bill" | "sublet_agreement";
+  label: string;
+  fileUrl: string;
+  createdAt: string;
+};
+
+export type LandlordPublicProfile = LandlordSummary & {
+  completedRentals: number;
+  avgResponseHours: number | null;
+  lastActiveLabel: string;
+  documents: LandlordDocumentItem[];
+};
+
+/**
+ * Extends the base LandlordSummary with the trust signals (completed
+ * rentals, avg response time, last-active) and tenant-inspection documents
+ * introduced by Landlord Verification & Property Document Management —
+ * kept as a separate function so existing LandlordSummary callers (e.g. the
+ * agreement page) are unaffected.
+ */
+export async function getLandlordPublicProfile(
+  landlordUserId: string,
+): Promise<LandlordPublicProfile> {
+  const summary = await getLandlordSummary(landlordUserId);
+  const profile = await prisma.profile.findFirst({
+    where: { userId: landlordUserId },
+    select: { id: true },
+  });
+  if (!profile) {
+    return {
+      ...summary,
+      completedRentals: 0,
+      avgResponseHours: null,
+      lastActiveLabel: formatLastActive(null),
+      documents: [],
+    };
+  }
+
+  const [signals, documents] = await Promise.all([
+    getLandlordTrustSignals(profile.id, landlordUserId),
+    prisma.landlordDocument.findMany({
+      where: { profileId: profile.id },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  return {
+    ...summary,
+    completedRentals: signals.completedRentals,
+    avgResponseHours: signals.avgResponseHours,
+    lastActiveLabel: formatLastActive(signals.lastActiveAt),
+    documents: documents.map((d) => ({
+      id: d.id,
+      type: d.type,
+      label: d.label,
+      fileUrl: d.fileUrl,
+      createdAt: d.createdAt.toISOString(),
+    })),
+  };
 }

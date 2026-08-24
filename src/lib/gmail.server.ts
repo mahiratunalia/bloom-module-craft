@@ -158,6 +158,29 @@ export function maintenanceStatusEmail(
   });
 }
 
+export function verificationApprovedEmail(to: string, name: string, role: "landlord" | "tenant") {
+  const nameEsc = escapeHtml(name);
+  return sendEmail({
+    to,
+    subject: "You're verified on rentFindr",
+    html: `<p>Hi ${nameEsc},</p><p>An admin has reviewed your submitted documents and approved your ${role} verification. Your verified badge is now live on rentFindr${role === "landlord" ? ", and any draft listings you had have been published as Active" : ""}.</p><p>— rentFindr</p>`,
+  });
+}
+
+export function verificationRejectedEmail(
+  to: string,
+  name: string,
+  role: "landlord" | "tenant",
+  reviewNote?: string | null,
+) {
+  const nameEsc = escapeHtml(name);
+  return sendEmail({
+    to,
+    subject: "Your rentFindr verification was not approved",
+    html: `<p>Hi ${nameEsc},</p><p>An admin reviewed your submitted ${role} verification documents and was not able to approve them${reviewNote ? `:</p><blockquote style="border-left:2px solid #ccc;margin:8px 0;padding-left:12px;">${escapeHtml(reviewNote)}</blockquote><p>` : ". "}Please log in to rentFindr to review and resubmit.</p><p>— rentFindr</p>`,
+  });
+}
+
 export function newMessageEmail(
   to: string,
   name: string,

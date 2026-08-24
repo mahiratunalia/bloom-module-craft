@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { verificationApprovedEmail, verificationRejectedEmail } from "@/lib/gmail.server";
 
 const schema = z.object({
   status: z.enum(["verified", "rejected"]),
@@ -25,7 +26,10 @@ export async function PATCH(
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
 
-  const existing = await prisma.tenantVerification.findUnique({ where: { id: verificationId } });
+  const existing = await prisma.tenantVerification.findUnique({
+    where: { id: verificationId },
+    include: { profile: { include: { user: { select: { email: true, name: true } } } } },
+  });
   if (!existing) return NextResponse.json({ error: "Verification not found" }, { status: 404 });
 
   const updated = await prisma.tenantVerification.update({
@@ -36,6 +40,19 @@ export async function PATCH(
       reviewedAt: new Date(),
     },
   });
+
+  const recipientEmail = existing.profile.user.email;
+  const recipientName = existing.profile.user.name ?? existing.profile.displayName;
+  if (parsed.data.status === "verified") {
+    await verificationApprovedEmail(recipientEmail, recipientName, "tenant");
+  } else {
+    await verificationRejectedEmail(
+      recipientEmail,
+      recipientName,
+      "tenant",
+      parsed.data.reviewNote,
+    );
+  }
 
   return NextResponse.json(updated);
 }
